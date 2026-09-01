@@ -1,0 +1,739 @@
+Starbound World Editor User Guide (English)
+============================================
+
+1. Purpose
+----------
+
+This toolkit reads, edits, and regenerates Starbound World4 `.world` files.
+
+The outermost directory of the package contains three programs:
+
+1. 01_Export_World_to_JSON.exe
+   Exports world parameters suitable for manual editing from a `.world` file to JSON.
+
+2. 02_Import_JSON_to_World.exe
+   Writes modified JSON parameters into a copy of the original `.world` file and creates a new `.world` file.
+
+3. 03_Regenerate_Biome_Region.exe
+   Clears generated sectors inside a specified rectangular region and changes the region to a specified biome, allowing the game to regenerate terrain, liquids, plants, monsters, microdungeons, and other content.
+
+
+2. System Requirements
+----------------------
+
+1. Windows 10/11 is supported.
+2. Python 3.8 or later is required. Python 3.11 or 3.12 is recommended.
+3. When installing Python, select:
+   - Add python.exe to PATH
+   - tcl/tk and IDLE
+4. No third-party pip packages are required.
+5. Extract the entire archive. Do not copy only the three EXE files; the `scipt` subfolder must remain in its original location.
+
+You can check Python and Tk in Command Prompt:
+
+    python --version
+    python -c "import tkinter; print(tkinter.TkVersion)"
+
+If an EXE cannot find Python, you can also double-click the matching `.cmd` launcher in the `scipt` folder.
+
+
+3. Important Before You Begin
+-----------------------------
+
+1. It is recommended that you completely exit Starbound and its server before editing. At minimum, the planet being edited must not be in use.
+2. Always keep a backup of the original `.world` file.
+3. Do not set the output path to the source `.world` file itself; the software also prevents this operation.
+4. When testing an edited world for the first time, use a test character or a copied `storage` folder.
+5. Before replacing a live world, confirm that the output file can be generated and verified successfully by the tool.
+6. Planet filenames contain celestial coordinates. To use an output file in the game, rename it to exactly the same filename as the original `.world` file before replacing the original.
+
+
+4. Tool 01 — Export World to Editable JSON
+------------------------------------------
+
+Features:
+
+- Reads a World4 `.world` file.
+- Exports editable parameters such as weather, sky colors, planet name, gravity, day length, layer definitions, biomes, monsters, parallax, and terrain selectors.
+- Does not modify the source `.world` file.
+- Does not place the very large tile and entity sector data in the JSON, making the JSON easier to read and edit.
+
+Steps:
+
+1. Double-click `01_Export_World_to_JSON.exe`.
+2. Select English, 中文, or Deutsch in the upper-right corner. The default language is English.
+3. Click “Browse” and select the `.world` file to read.
+4. Click “Start Export”.
+5. The JSON is automatically created in the same folder as the source `.world` file, using this naming format:
+
+       tmp_<complete original world filename>.json
+
+   Example:
+
+       planet.world
+       tmp_planet.world.json
+
+6. You can click “Open JSON” or “Open Folder”.
+
+Notes:
+
+- The `source` section records the source `.world` path, SHA-256 hash, and validation information. Editing it is not recommended.
+- The main editable sections are `world`, `sky`, `terrain`, `biomes`, and `parallax`.
+- Do not casually delete fields, change array lengths, or modify biome indexes you do not understand.
+- Tool 01 exports parameters only; it does not redraw terrain that has already been generated.
+
+
+5. Tool 02 — Import Modified JSON into a World
+-----------------------------------------------
+
+Features:
+
+- Reads a JSON file created by Tool 01 and subsequently edited.
+- Reads the corresponding source `.world` file again.
+- Writes modified JSON parameters into a copy of the source world.
+- Preserves unmodified parameters, generated terrain, player-built structures, objects, and entity records from the source world.
+- Can change the planet name and optionally synchronize the name shown on the navigation map.
+
+Steps:
+
+1. Edit the JSON created by Tool 01 in VS Code, Notepad++, or Notepad, and save it.
+2. Double-click `02_Import_JSON_to_World.exe`.
+3. Select the modified JSON file.
+4. The software reads the source `.world` path recorded in the JSON. If the file has moved, browse to and select the correct original `.world` file.
+5. Select the complete output path for the new `.world` file.
+6. To change the planet name, enter it in the “New Planet Name” field.
+7. To synchronize the name shown on the navigation map as well:
+   - Enable synchronization of the navigation-map name;
+   - Select the `storage\universe` folder containing `universe.chunks`.
+8. Click “Start Import/Create”.
+9. If the output file already exists, the software asks whether to overwrite it using the currently selected interface language.
+
+Tool 02 does not:
+
+- Automatically regenerate previously explored terrain.
+- Delete player-built structures.
+- Modify old teleport bookmark names stored in character `.player` files.
+
+Changes to settings read at runtime, such as weather, sky colors, music, or parallax, are normally visible after re-entering the world.
+
+Biome blocks, terrain selectors, ore distribution, plants, and placed features are mainly world-generation rules. Already saved sectors are not redrawn automatically. Use Tool 03 when a region must be regenerated.
+
+
+6. Tool 03 — Regenerate a Rectangular Biome Region
+--------------------------------------------------
+
+Features:
+
+- Accepts a rectangular X/Y range.
+- Reads the target `.biome` from the selected Starbound assets.
+- Recompiles a complete biome-region recipe for the selection.
+- Deletes every 32×32 sector intersecting the selection so that the game regenerates it when a player approaches.
+
+Recompiled content includes:
+
+- Main and sub-block materials;
+- Terrain shape;
+- Foreground and background caves;
+- Foreground and background ore distribution;
+- Ocean liquid, sea level, and cave liquid;
+- Grass, bushes, and trees;
+- Objects and treasure boxes;
+- Microdungeons specified by the `.biome`;
+- Monster spawn tables;
+- Parallax, ambient sounds, and music.
+
+Even if the target biome or one of its microdungeons has never been compiled into the source `.world`, Tool 03 compiles and adds it from the assets.
+
+Steps:
+
+1. Double-click `03_Regenerate_Biome_Region.exe`.
+2. Select the source `.world` file.
+3. Select the Starbound assets:
+   - You may select an unpacked assets folder containing directories such as `biomes`, `terrain`, and `parallax`;
+   - You may select a Starbound assets folder containing `packed.pak`;
+   - If you select the parent directory of `assets`, the tool also attempts to detect common layouts automatically.
+4. Select the output path for the new `.world` file.
+5. Click “Scan Assets and Populate Biomes” and wait for the biome drop-down list to be generated.
+6. Click “Read World Information”.
+7. Enter the range:
+   - X start and X end;
+   - Y start and Y end;
+   - Coordinates are tile coordinates, and both endpoints are included.
+8. Select the target biome from the drop-down list. You may also type the name of a biome that exists in the selected assets.
+9. Click “Create Regenerated World”.
+10. Read the confirmation window and continue after confirming the information.
+11. Wait while the program compiles the biome, removes sectors, rebuilds the file, and verifies the World4 data.
+
+Ranges and sectors:
+
+- The biome range in metadata is written using the entered coordinates.
+- Actual terrain deletion is expanded outward to 32×32 sector boundaries.
+- Therefore, the actual deleted tile/entity area may be slightly larger than the entered rectangle.
+
+Important warning:
+
+- Tool 03 deletes all saved content in every intersecting sector.
+- This includes natural terrain, player-built structures, placed objects, liquids, monsters, NPCs, stagehands, and unique-entity records.
+- Starbound tile data cannot reliably distinguish naturally generated blocks from player-placed blocks, so natural terrain cannot be regenerated independently while preserving buildings.
+- The source `.world` file is not modified. All changes are written only to the new output file.
+
+
+7. Ocean and Ocean-Floor Handling in Tool 03
+---------------------------------------------
+
+When one of the following ocean-floor biomes is selected:
+
+- oceanfloor
+- toxicoceanfloor
+- arcticoceanfloor
+- magmaoceanfloor
+
+Tool 03 automatically creates two vertical layers:
+
+- The lower layer uses the corresponding ocean-floor biome and generates uneven seabed terrain, underwater plants, treasure boxes, microdungeons, and seabed parallax;
+- The upper layer automatically uses `ocean`, `toxic`, `arctic`, or `magma`, generating seawater, island rules, and ocean parallax;
+- Both layers use one continuous liquid surface;
+- The boundary is normally placed at approximately 5/7 of the selected Y-range height;
+- The completion window displays the actual boundary Y coordinate.
+
+Therefore, you do not need to generate the ocean floor first and then run the tool a second time to generate the ocean.
+
+
+8. Installing an Output File in the Game
+----------------------------------------
+
+1. Completely exit the game and server.
+2. Back up the original `.world` file.
+3. Copy the output file into the original `.world` file's directory.
+4. Rename the output file to exactly the same filename as the original world.
+5. Replace the original file with the output file.
+6. Enter the game and test it.
+
+If the world does not load:
+
+- Exit the game immediately;
+- Restore the backup;
+- Check whether the wrong source world, assets, or biome was selected;
+- Inspect the latest Error and Warn entries in Starbound's `storage\starbound.log`.
+
+
+9. Frequently Asked Questions
+-----------------------------
+
+1. Nothing happens when I double-click an EXE
+
+   Check that Python is installed, added to PATH, and that Tk is available. You can also run the corresponding `.cmd` file in `scipt`.
+
+2. The tool reports that a biome cannot be found
+
+   Select the correct assets folder again and click “Scan Assets”. When using a mod biome, the assets must actually contain all resources required by that mod.
+
+3. The output file already exists
+
+   The software asks whether to overwrite it. If you select “No”, it returns to the previous window without clearing your entries.
+
+4. An old region does not change after I edit the JSON
+
+   Tool 02 changes world-generation parameters but does not delete saved sectors. Use Tool 03 to reset the region that must be regenerated.
+
+5. Buildings disappear after Tool 03 runs
+
+   This is expected for a complete sector reset. Run Tool 03 only on regions where all saved content may be cleared.
+
+6. The planet name changed, but an old teleport bookmark still shows the previous name
+
+   Teleport bookmark names are stored in the character `.player` file. Delete the old bookmark in the game and add it again.
+
+
+Starbound World Editor 使用说明（中文版）
+========================================
+
+一、软件用途
+------------
+
+本工具用于读取、编辑和重新生成 Starbound 的 World4 `.world` 世界文件。
+
+压缩包最外层包含三个程序：
+
+1. 01_Export_World_to_JSON.exe
+   把 `.world` 中适合人工编辑的世界参数导出为 JSON。
+
+2. 02_Import_JSON_to_World.exe
+   把修改后的 JSON 参数写回原 `.world` 的副本，生成新的 `.world`。
+
+3. 03_Regenerate_Biome_Region.exe
+   清除指定矩形区域已经生成的 sector，并把该区域改为指定 biome，使游戏重新生成地形、液体、植物、怪物和微型地牢等内容。
+
+
+二、运行环境
+------------
+
+1. 支持 Windows 10/11。
+2. 需要 Python 3.8 或更高版本，推荐 Python 3.11 或 3.12。
+3. 安装 Python 时请勾选：
+   - Add python.exe to PATH
+   - tcl/tk and IDLE
+4. 不需要安装任何 pip 第三方库。
+5. 必须完整解压压缩包。不要只复制三个 EXE；`scipt` 子文件夹必须保留在原位置。
+
+可以在命令提示符中检查 Python 和 Tk：
+
+    python --version
+    python -c "import tkinter; print(tkinter.TkVersion)"
+
+如果 EXE 找不到 Python，也可以双击 `scipt` 文件夹中的同名 `.cmd` 启动器。
+
+
+三、开始前的重要事项
+--------------------
+
+1. 操作建议完全退出 Starbound 游戏和服务器，至少被编辑的星球不能正在被读取。
+2. 永远保留原始 `.world` 文件的备份。
+3. 不要把输出路径设置为来源 `.world` 本身；软件也会阻止这种操作。
+4. 第一次测试编辑后的世界时，建议使用测试角色或复制的 storage。
+5. 正式替换前，请确认输出文件能够被工具正常生成并验证。
+6. 星球文件名包含星球坐标。最终用于游戏时，应把输出文件改回原 `.world` 完全相同的文件名，再替换原文件。
+
+
+四、01——导出 World 为可编辑 JSON
+---------------------------------
+
+功能：
+
+- 读取 World4 `.world`。
+- 导出天气、天空颜色、星球名称、重力、昼长、层定义、biome、怪物、parallax、地形 selector 等可编辑参数。
+- 不修改来源 `.world`。
+- 不把庞大的 tile、entity sector 数据写入 JSON，因此 JSON 更容易阅读和编辑。
+
+操作步骤：
+
+1. 双击 `01_Export_World_to_JSON.exe`。
+2. 在右上角选择 English、中文或 Deutsch；默认语言是 English。
+3. 点击“浏览”，选择需要读取的 `.world` 文件。
+4. 点击“开始导出”。
+5. JSON 会自动生成在来源 `.world` 的同一文件夹中，名称格式为：
+
+       tmp_<原 world 完整文件名>.json
+
+   例如：
+
+       planet.world
+       tmp_planet.world.json
+
+6. 可以点击“打开 JSON”或“打开所在文件夹”。
+
+注意：
+
+- JSON 中的 `source` 保存来源 `.world` 路径、SHA-256 和校验信息，不建议修改。
+- 主要可编辑区域是 `world`、`sky`、`terrain` 、`biomes` 以及 `parallax`。
+- 不要随意删除字段、改变数组长度或修改不理解的 biome index。
+- 01 只导出参数，不会重画已经生成的地形。
+
+
+五、02——把修改后的 JSON 导回 World
+------------------------------------
+
+功能：
+
+- 读取由 01 生成并经过编辑的 JSON。
+- 重新读取它对应的来源 `.world`。
+- 把 JSON 中修改过的参数写入来源世界的副本。
+- 保留来源世界中没有修改的参数、已经生成的地形、玩家建筑、object 和实体记录。
+- 可以修改星球名称，并可选择同步修改星图名称。
+
+操作步骤：
+
+1. 使用 VS Code、Notepad++ 或记事本修改 01 生成的 JSON，并保存。
+2. 双击 `02_Import_JSON_to_World.exe`。
+3. 选择修改后的 JSON。
+4. 软件会读取 JSON 中记录的来源 `.world` 路径；如果文件已经移动，可以重新浏览并选择正确的原始 `.world`。
+5. 选择新 `.world` 的完整输出路径。
+6. 如需修改星球名称，在“新星球名称”输入框中填写名称。
+7. 如果还要同步星图中的名称：
+   - 勾选同步星图名称；
+   - 选择包含 `universe.chunks` 的 `storage\universe` 文件夹。
+8. 点击“开始导入/创建”。
+9. 如果输出文件已经存在，软件会使用当前界面语言询问是否覆盖。
+
+02 不会做的事情：
+
+- 不会自动重新生成已经探索过的地形。
+- 不会删除玩家建筑。
+- 不会修改角色 `.player` 文件中的旧传送书签名称。
+
+如果修改的是天气、天空颜色、音乐或 parallax 等运行时读取的设置，重新进入世界后通常可以直接看到效果。
+
+如果修改的是 biome 物块、地形 selector、矿脉、植物或放置物，这些主要属于世界生成规则；已经保存的 sector 不会自动重画。需要重新生成区域时，请使用 03。
+
+
+六、03——重新生成指定矩形 Biome 区域
+------------------------------------
+
+功能：
+
+- 输入 X/Y 矩形范围。
+- 从指定 Starbound assets 中读取目标 `.biome`。
+- 为选区重新编译完整的 biome 区域配方。
+- 删除所有与选区相交的 32×32 sector，使游戏在玩家靠近时重新生成。
+
+重新编译的内容包括：
+
+- 主物块与子物块；
+- 地形形状；
+- 前景和背景洞穴；
+- 前景和背景矿脉；
+- 海洋液体、液面和洞穴液体；
+- grass、bush、tree；
+- object 和 treasureBox；
+- `.biome` 中的 microdungeon；
+- 怪物生成表；
+- parallax、环境音和音乐。
+
+即使目标 biome 或它的 microdungeon 从未写入来源 `.world`，03 也会从 assets 编译并加入。
+
+操作步骤：
+
+1. 双击 `03_Regenerate_Biome_Region.exe`。
+2. 选择来源 `.world`。
+3. 选择 Starbound assets：
+   - 可以选择包含解包后 `biomes`、`terrain`、`parallax` 等目录的 assets 文件夹；
+   - 也可以选择包含 `packed.pak` 的 Starbound assets 文件夹；
+   - 如果选择的是 `assets` 的上级目录，工具也会尝试自动识别常见结构。
+4. 选择新 `.world` 的输出路径。
+5. 点击“扫描 Assets 并填充 biome”，等待 biome 下拉列表生成。
+6. 点击“读取 world 信息”。
+7. 输入范围：
+   - X 起点、X 终点；
+   - Y 起点、Y 终点；
+   - 坐标为 tile 坐标并且包含起点和终点。
+8. 从下拉框选择目标 biome，也可以输入已在所选 assets 中存在的 biome 名称。
+9. 点击“生成重置后的 World”。
+10. 阅读确认窗口。确认无误后继续。
+11. 等待程序编译 biome、删除 sector、重建并验证 World4。
+
+范围与 sector：
+
+- metadata 中的 biome 范围按照输入坐标写入。
+- 实际删除的地形按 32×32 sector 向外对齐。
+- 因此被删除的实际 tile/entity 范围可能略大于输入矩形。
+
+重要警告：
+
+- 03 会删除相交 sector 中的所有已保存内容。
+- 包括自然地形、玩家建筑、放置的 object、液体、怪物、NPC、stagehand 和 unique entity 记录。
+- Starbound tile 数据不能可靠区分“自然生成”和“玩家放置”，因此无法只保留建筑而单独重生自然地形。
+- 来源 `.world` 不会被修改，所有修改只写入新的输出文件。
+
+
+七、03 的海洋与海床处理
+----------------------
+
+选择以下海床 biome 时：
+
+- oceanfloor
+- toxicoceanfloor
+- arcticoceanfloor
+- magmaoceanfloor
+
+03 会自动创建上下两层：
+
+- 下层使用对应的 oceanfloor biome，生成起伏海床、海底植物、箱子、microdungeon 和海底 parallax；
+- 上层自动使用 ocean、toxic、arctic 或 magma，生成海水、岛屿规则和海洋 parallax；
+- 两层使用连续的液面；
+- 分界通常位于所选 Y 范围高度的约 5/7 处；
+- 完成窗口会显示实际的分界 Y。
+
+因此不需要先生成 oceanfloor，再运行第二次生成 ocean。
+
+
+八、如何把输出文件放回游戏
+--------------------------
+
+1. 完全退出游戏和服务器。
+2. 备份原 `.world`。
+3. 把输出文件复制到原 `.world` 所在目录。
+4. 把输出文件改成原世界完全相同的文件名。
+5. 用输出文件替换原文件。
+6. 进入游戏测试。
+
+若世界无法加载：
+
+- 立即退出游戏；
+- 恢复备份；
+- 检查是否选错来源 world、assets 或 biome；
+- 查看 Starbound `storage\starbound.log` 中最新的 Error 和 Warn。
+
+
+九、常见问题
+------------
+
+1. 双击 EXE 没反应
+
+   检查 Python 是否安装、是否加入 PATH，以及 Tk 是否可用。也可以运行 `scipt` 中对应的 `.cmd`。
+
+2. 提示找不到 biome
+
+   重新选择正确的 assets 文件夹并点击“扫描 Assets”。使用 Mod biome 时，assets 中必须实际包含该 Mod 的全部依赖资源。
+
+3. 输出文件已经存在
+
+   软件会询问是否覆盖。选择“否”后会返回原窗口，已输入的信息不会清空。
+
+4. 修改 JSON 后，旧区域没有变化
+
+   02 只修改世界生成参数，不删除已经保存的 sector。请使用 03 重置需要重新生成的区域。
+
+5. 03 生成后建筑消失
+
+   这是完整 sector 重置的预期结果。请只对允许全部清除的区域运行 03。
+
+6. 星球名称变了，但旧传送书签仍显示旧名称
+
+   传送书签名称保存在角色 `.player` 中。请在游戏中删除旧书签并重新添加。
+
+
+Starbound World Editor – Benutzerhandbuch (Deutsch)
+====================================================
+
+1. Verwendungszweck
+-------------------
+
+Dieses Werkzeug dient zum Lesen, Bearbeiten und erneuten Erzeugen von World4-Weltdateien (`.world`) aus Starbound.
+
+Im Hauptverzeichnis des Archivs befinden sich drei Programme:
+
+1. 01_Export_World_to_JSON.exe
+   Exportiert die für eine manuelle Bearbeitung geeigneten Weltparameter aus einer `.world`-Datei in eine JSON-Datei.
+
+2. 02_Import_JSON_to_World.exe
+   Schreibt die geänderten JSON-Parameter in eine Kopie der ursprünglichen `.world`-Datei und erzeugt eine neue `.world`-Datei.
+
+3. 03_Regenerate_Biome_Region.exe
+   Löscht bereits erzeugte Sektoren in einem angegebenen rechteckigen Bereich und weist diesem Bereich ein ausgewähltes Biom zu. Dadurch kann das Spiel Gelände, Flüssigkeiten, Pflanzen, Monster, Mikrodungeons und weitere Inhalte neu erzeugen.
+
+
+2. Systemvoraussetzungen
+------------------------
+
+1. Unterstützt werden Windows 10 und Windows 11.
+2. Python 3.8 oder neuer wird benötigt. Empfohlen werden Python 3.11 oder 3.12.
+3. Wählen Sie bei der Installation von Python folgende Optionen aus:
+   - Add python.exe to PATH
+   - tcl/tk and IDLE
+4. Es werden keine zusätzlichen pip-Pakete benötigt.
+5. Entpacken Sie das Archiv vollständig. Kopieren Sie nicht nur die drei EXE-Dateien; der Unterordner `scipt` muss an seiner ursprünglichen Position bleiben.
+
+Python und Tk können Sie in der Eingabeaufforderung prüfen:
+
+    python --version
+    python -c "import tkinter; print(tkinter.TkVersion)"
+
+Falls eine EXE-Datei Python nicht findet, können Sie auch den gleichnamigen `.cmd`-Starter im Ordner `scipt` doppelt anklicken.
+
+
+3. Wichtige Hinweise vor dem Beginn
+-----------------------------------
+
+1. Es wird empfohlen, Starbound und den Server vor der Bearbeitung vollständig zu beenden. Mindestens der zu bearbeitende Planet darf gerade nicht verwendet werden.
+2. Bewahren Sie immer eine Sicherungskopie der ursprünglichen `.world`-Datei auf.
+3. Legen Sie die Quelldatei nicht zugleich als Ausgabeziel fest. Die Software verhindert diesen Vorgang ebenfalls.
+4. Verwenden Sie beim ersten Test einer bearbeiteten Welt möglichst einen Testcharakter oder eine Kopie des `storage`-Ordners.
+5. Prüfen Sie vor dem endgültigen Ersetzen, ob die Ausgabedatei vom Werkzeug erfolgreich erzeugt und validiert werden kann.
+6. Der Dateiname eines Planeten enthält seine Koordinaten. Für die Verwendung im Spiel muss die Ausgabedatei vor dem Ersetzen exakt denselben Namen wie die ursprüngliche `.world`-Datei erhalten.
+
+
+4. Werkzeug 01 – World als bearbeitbare JSON-Datei exportieren
+--------------------------------------------------------------
+
+Funktionen:
+
+- Liest eine World4-`.world`-Datei.
+- Exportiert bearbeitbare Parameter wie Wetter, Himmelsfarben, Planetenname, Gravitation, Tageslänge, Ebenendefinitionen, Biome, Monster, Parallax-Hintergründe und Gelände-Selektoren.
+- Verändert die Quell-`.world`-Datei nicht.
+- Schreibt die sehr umfangreichen Tile- und Entity-Sektordaten nicht in die JSON-Datei. Dadurch bleibt sie besser lesbar und bearbeitbar.
+
+Vorgehensweise:
+
+1. Doppelklicken Sie auf `01_Export_World_to_JSON.exe`.
+2. Wählen Sie oben rechts English, 中文 oder Deutsch. Die Standardsprache ist English.
+3. Klicken Sie auf „Durchsuchen“ und wählen Sie die zu lesende `.world`-Datei aus.
+4. Klicken Sie auf „Export starten“.
+5. Die JSON-Datei wird automatisch im selben Ordner wie die Quell-`.world`-Datei mit folgendem Namensschema erzeugt:
+
+       tmp_<vollständiger ursprünglicher World-Dateiname>.json
+
+   Beispiel:
+
+       planet.world
+       tmp_planet.world.json
+
+6. Anschließend können Sie „JSON öffnen“ oder „Ordner öffnen“ wählen.
+
+Hinweise:
+
+- Der Abschnitt `source` enthält den Pfad der Quell-`.world`-Datei, ihren SHA-256-Wert und Prüfinformationen. Eine Bearbeitung wird nicht empfohlen.
+- Die wichtigsten bearbeitbaren Bereiche sind `world`, `sky`, `terrain`, `biomes` und `parallax`.
+- Löschen Sie Felder nicht unbedacht, ändern Sie keine Array-Längen und bearbeiten Sie keine unbekannten Biom-Indizes.
+- Werkzeug 01 exportiert nur Parameter und zeichnet bereits erzeugtes Gelände nicht neu.
+
+
+5. Werkzeug 02 – Geänderte JSON-Daten in eine World importieren
+---------------------------------------------------------------
+
+Funktionen:
+
+- Liest eine mit Werkzeug 01 erzeugte und anschließend bearbeitete JSON-Datei.
+- Liest die dazugehörige Quell-`.world`-Datei erneut.
+- Schreibt die in der JSON-Datei geänderten Parameter in eine Kopie der Quellwelt.
+- Behält nicht geänderte Parameter, bereits erzeugtes Gelände, Spielerbauten, Objekte und Entity-Datensätze der Quellwelt bei.
+- Kann den Planetennamen ändern und diesen optional mit dem auf der Sternenkarte angezeigten Namen synchronisieren.
+
+Vorgehensweise:
+
+1. Bearbeiten und speichern Sie die von Werkzeug 01 erzeugte JSON-Datei mit VS Code, Notepad++ oder dem Windows-Editor.
+2. Doppelklicken Sie auf `02_Import_JSON_to_World.exe`.
+3. Wählen Sie die geänderte JSON-Datei aus.
+4. Die Software liest den in der JSON-Datei gespeicherten Pfad der Quell-`.world`-Datei. Wurde die Datei verschoben, können Sie die richtige ursprüngliche `.world`-Datei erneut auswählen.
+5. Wählen Sie den vollständigen Ausgabepfad der neuen `.world`-Datei.
+6. Tragen Sie zum Ändern des Planetennamens den neuen Namen in das Feld „Neuer Planetenname“ ein.
+7. Soll auch der Name auf der Sternenkarte synchronisiert werden:
+   - Aktivieren Sie die Synchronisierung des Sternenkartennamens;
+   - Wählen Sie den Ordner `storage\universe`, der `universe.chunks` enthält.
+8. Klicken Sie auf „Import/Erstellung starten“.
+9. Existiert die Ausgabedatei bereits, fragt die Software in der aktuell ausgewählten Oberflächensprache, ob sie überschrieben werden soll.
+
+Werkzeug 02 führt Folgendes nicht aus:
+
+- Bereits erkundetes Gelände wird nicht automatisch neu erzeugt.
+- Spielerbauten werden nicht gelöscht.
+- Alte Namen von Teleport-Lesezeichen in den `.player`-Dateien der Charaktere werden nicht geändert.
+
+Wenn Sie zur Laufzeit gelesene Einstellungen wie Wetter, Himmelsfarben, Musik oder Parallax-Hintergründe ändern, sind die Änderungen normalerweise nach dem erneuten Betreten der Welt sichtbar.
+
+Biomblöcke, Gelände-Selektoren, Erzverteilung, Pflanzen und platzierte Merkmale gehören hauptsächlich zu den Regeln der Welterzeugung. Bereits gespeicherte Sektoren werden nicht automatisch neu gezeichnet. Verwenden Sie Werkzeug 03, wenn ein Bereich neu erzeugt werden muss.
+
+
+6. Werkzeug 03 – Einen rechteckigen Biom-Bereich neu erzeugen
+--------------------------------------------------------------
+
+Funktionen:
+
+- Verarbeitet einen rechteckigen X/Y-Bereich.
+- Liest das Ziel-`.biome` aus den ausgewählten Starbound-Assets.
+- Kompiliert für den ausgewählten Bereich ein vollständiges Biom-Rezept neu.
+- Löscht alle 32×32-Sektoren, die den Bereich schneiden, sodass das Spiel sie neu erzeugt, sobald sich ein Spieler nähert.
+
+Neu kompilierte Inhalte umfassen:
+
+- Haupt- und Unterblöcke;
+- Geländeform;
+- Vordergrund- und Hintergrundhöhlen;
+- Erzverteilung im Vorder- und Hintergrund;
+- Ozeanflüssigkeit, Meeresspiegel und Höhlenflüssigkeit;
+- Gras, Büsche und Bäume;
+- Objekte und Schatzkisten;
+- In der `.biome`-Datei definierte Mikrodungeons;
+- Monster-Spawn-Tabellen;
+- Parallax-Hintergründe, Umgebungsgeräusche und Musik.
+
+Auch wenn das Zielbiom oder einer seiner Mikrodungeons noch nie in die Quell-`.world`-Datei kompiliert wurde, kompiliert Werkzeug 03 ihn aus den Assets und fügt ihn hinzu.
+
+Vorgehensweise:
+
+1. Doppelklicken Sie auf `03_Regenerate_Biome_Region.exe`.
+2. Wählen Sie die Quell-`.world`-Datei aus.
+3. Wählen Sie die Starbound-Assets:
+   - Sie können einen entpackten Assets-Ordner auswählen, der Verzeichnisse wie `biomes`, `terrain` und `parallax` enthält;
+   - Sie können einen Starbound-Assets-Ordner auswählen, der `packed.pak` enthält;
+   - Wenn Sie das übergeordnete Verzeichnis von `assets` auswählen, versucht das Werkzeug ebenfalls, übliche Verzeichnisstrukturen automatisch zu erkennen.
+4. Wählen Sie den Ausgabepfad für die neue `.world`-Datei.
+5. Klicken Sie auf „Assets scannen und Biome einlesen“ und warten Sie, bis die Biom-Auswahlliste erstellt wurde.
+6. Klicken Sie auf „World-Informationen lesen“.
+7. Geben Sie den Bereich ein:
+   - X-Start und X-Ende;
+   - Y-Start und Y-Ende;
+   - Die Werte sind Tile-Koordinaten, und beide Endpunkte sind eingeschlossen.
+8. Wählen Sie das Zielbiom in der Auswahlliste. Sie können auch den Namen eines Bioms eingeben, das in den ausgewählten Assets vorhanden ist.
+9. Klicken Sie auf „Neu erzeugte World erstellen“.
+10. Lesen Sie das Bestätigungsfenster und fahren Sie fort, wenn die Angaben richtig sind.
+11. Warten Sie, während das Programm das Biom kompiliert, Sektoren entfernt, die Datei neu aufbaut und die World4-Daten überprüft.
+
+Bereiche und Sektoren:
+
+- Der Biom-Bereich in den Metadaten wird entsprechend den eingegebenen Koordinaten gespeichert.
+- Die tatsächliche Geländelöschung wird nach außen an 32×32-Sektorgrenzen ausgerichtet.
+- Deshalb kann der tatsächlich gelöschte Tile-/Entity-Bereich geringfügig größer als das eingegebene Rechteck sein.
+
+Wichtige Warnung:
+
+- Werkzeug 03 löscht sämtliche gespeicherten Inhalte in allen betroffenen Sektoren.
+- Dazu gehören natürliches Gelände, Spielerbauten, platzierte Objekte, Flüssigkeiten, Monster, NPCs, Stagehands und Unique-Entity-Datensätze.
+- Starbounds Tile-Daten können natürlich erzeugte Blöcke nicht zuverlässig von durch Spieler platzierten Blöcken unterscheiden. Daher lässt sich natürliches Gelände nicht separat neu erzeugen und zugleich können Gebäude nicht erhalten bleiben.
+- Die Quell-`.world`-Datei wird nicht verändert. Alle Änderungen werden ausschließlich in die neue Ausgabedatei geschrieben.
+
+
+7. Behandlung von Ozeanen und Meeresböden in Werkzeug 03
+--------------------------------------------------------
+
+Wenn eines der folgenden Meeresboden-Biome ausgewählt wird:
+
+- oceanfloor
+- toxicoceanfloor
+- arcticoceanfloor
+- magmaoceanfloor
+
+erstellt Werkzeug 03 automatisch zwei übereinanderliegende Ebenen:
+
+- Die untere Ebene verwendet das entsprechende Oceanfloor-Biom und erzeugt einen unebenen Meeresboden, Unterwasserpflanzen, Schatzkisten, Mikrodungeons und Meeresboden-Parallax;
+- Die obere Ebene verwendet automatisch `ocean`, `toxic`, `arctic` oder `magma` und erzeugt Meerwasser, Inselregeln und Ozean-Parallax;
+- Beide Ebenen verwenden eine durchgehende Flüssigkeitsoberfläche;
+- Die Grenze liegt normalerweise bei ungefähr 5/7 der Höhe des ausgewählten Y-Bereichs;
+- Das Abschlussfenster zeigt die tatsächlich verwendete Y-Koordinate der Grenze an.
+
+Es ist daher nicht erforderlich, zuerst den Meeresboden und anschließend in einem zweiten Durchlauf den Ozean zu erzeugen.
+
+
+8. Ausgabedatei in das Spiel übernehmen
+----------------------------------------
+
+1. Beenden Sie das Spiel und den Server vollständig.
+2. Sichern Sie die ursprüngliche `.world`-Datei.
+3. Kopieren Sie die Ausgabedatei in den Ordner der ursprünglichen `.world`-Datei.
+4. Benennen Sie die Ausgabedatei exakt wie die ursprüngliche Weltdatei.
+5. Ersetzen Sie die ursprüngliche Datei durch die Ausgabedatei.
+6. Starten Sie das Spiel und testen Sie die Welt.
+
+Falls die Welt nicht geladen wird:
+
+- Beenden Sie das Spiel sofort;
+- Stellen Sie die Sicherungskopie wieder her;
+- Prüfen Sie, ob die falsche Quellwelt, falsche Assets oder das falsche Biom ausgewählt wurden;
+- Prüfen Sie die neuesten Error- und Warn-Einträge in Starbounds `storage\starbound.log`.
+
+
+9. Häufig gestellte Fragen
+-------------------------
+
+1. Beim Doppelklick auf eine EXE-Datei geschieht nichts
+
+   Prüfen Sie, ob Python installiert, zu PATH hinzugefügt und Tk verfügbar ist. Sie können auch die entsprechende `.cmd`-Datei im Ordner `scipt` ausführen.
+
+2. Das Werkzeug meldet, dass ein Biom nicht gefunden wurde
+
+   Wählen Sie erneut den richtigen Assets-Ordner und klicken Sie auf „Assets scannen“. Bei einem Mod-Biom müssen die Assets tatsächlich sämtliche von diesem Mod benötigten Ressourcen enthalten.
+
+3. Die Ausgabedatei ist bereits vorhanden
+
+   Die Software fragt, ob sie überschrieben werden soll. Wenn Sie „Nein“ wählen, kehrt sie zum vorherigen Fenster zurück, ohne Ihre Eingaben zu löschen.
+
+4. Ein alter Bereich ändert sich nach der Bearbeitung der JSON-Datei nicht
+
+   Werkzeug 02 ändert die Parameter der Welterzeugung, löscht jedoch keine gespeicherten Sektoren. Verwenden Sie Werkzeug 03, um den neu zu erzeugenden Bereich zurückzusetzen.
+
+5. Nach der Verwendung von Werkzeug 03 sind Gebäude verschwunden
+
+   Dies ist das erwartete Ergebnis einer vollständigen Sektorzurücksetzung. Verwenden Sie Werkzeug 03 nur für Bereiche, in denen sämtliche gespeicherten Inhalte gelöscht werden dürfen.
+
+6. Der Planetenname wurde geändert, aber ein altes Teleport-Lesezeichen zeigt weiterhin den alten Namen
+
+   Die Namen von Teleport-Lesezeichen werden in der `.player`-Datei des Charakters gespeichert. Löschen Sie das alte Lesezeichen im Spiel und fügen Sie es erneut hinzu.
