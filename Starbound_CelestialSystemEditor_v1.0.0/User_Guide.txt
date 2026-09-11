@@ -1,0 +1,1595 @@
+STARBOUND WORLD EDITOR — USER GUIDE
+Created by V.O.S.A.
+English → 中文 → Deutsch
+
+======================================================================
+ENGLISH
+======================================================================
+
+1. Package and starting the tools
+
+Keep these items together after extracting the whole package:
+  script/
+  01_Export_World_to_JSON.exe
+  02_Import_JSON_to_World.exe
+  03_Celestial_System_Editor.exe
+  User_Guide.txt
+
+The three EXEs are Windows launchers, not programs with Python bundled inside.
+Install Python 3.8 or later with Tkinter/Tk. Keep the script folder, its Python
+modules, icon and native title-bar DLLs together. Do not rename the EXEs or mix
+files from different releases. Language at the top right switches the interface
+between English, Chinese and German; the default is English.
+
+If a launcher cannot find Python, set PYTHONW_EXE to your pythonw.exe, or run the
+corresponding command from the extracted package folder:
+  python script/world_to_json_gui.py
+  python script/json_to_world_gui.py
+  python script/celestial_system_editor_gui.py
+
+2. Saving and reset: choose the correct operation
+
+An editor Apply button and a disk-writing button are different operations.
+Apply body fields, Apply world parameters, Apply biome order and Apply station
+orbit stage changes in the editor. Save system to universe.chunks commits them.
+Leaving an edit unsaved and closing/reloading the editor loses that edit.
+Buttons explicitly mentioning .world on the species, region, hue and ocean
+dialogs write directly to the selected world when confirmed; they do not wait
+for the main Save system button.
+
+Effects of the individual workflows:
+  01 export: reads the world and writes JSON; no world reset.
+  02 import: replaces metadata; saved sectors and entities are retained.
+  03 names, appearance, environmental metadata, or orbit-only migration:
+     no terrain reset, provided the generation recipe is unchanged.
+  03 size, generation-layer heights, real dungeon lists/variance, or actual
+     Ordered biome recipe/order/range changes: whole affected world reset.
+     Existing terrain, buildings, liquids and entities are discarded from
+     that world's replacement. Backups retain the old world.
+  03 same-order Ordered Apply + Save: background repair itself changes
+     metadata only; it does not reset existing sectors.
+  03 Full biome region: local reset of the effective selected sectors.
+  03 immediate ocean-floor application: local reset beneath detected ocean
+     intervals, according to the complete pairing configuration for that body.
+  03 Parallax only / either monster-pool editor: no saved-sector reset.
+  03 tile replacement / hue copy: edit specified saved tile fields without
+     sector regeneration. Material behavior can still affect the game later.
+
+Completely close Starbound and its server before 02 import, main Save system,
+ocean-floor application, species editing or hue copying. Only Generated biome
+regions permits the game to remain on another world: leave the target planet,
+wait for it to unload, and keep every player away until editing finishes.
+The tool checks target-file availability and changes; do not return early.
+Use a separate backup of important storage before making destructive edits.
+
+3. Tool 01 — World → Editable JSON
+
+Select an existing Starbound or supported OpenStarbound .world, then Start
+export. The original world is never changed. Output is created beside it as
+tmp_<complete world filename>.json; an existing output requires confirmation.
+Open JSON and Open folder provide access to the result. Assets are not needed
+for this export. Export from a stable world file, preferably with the game shut.
+
+The compact project has five main groups:
+  source: original path, checksum, size and biome count. These identify the
+     matching original world; do not edit them to bypass import checks.
+  world: name, weather, gravity, day length, spawning, player start, air,
+     beam-up, status effects and other supported world parameters.
+  sky: sky colors, light, horizon images/clouds, satellites and sky boundaries.
+  terrain: generation layers/cells, terrain selectors, noise and blending.
+  biomes: materials, ores, spawnProfile, parallax, audio and placeables.
+     Identical compiled copies share one parameters object; indexes lists the
+     original biome references to which that object applies.
+
+Edit the values in these groups and save valid UTF-8 JSON. Keep JSON types and
+array/object structure intact. Weather is represented as weighted entries;
+resource names must exist in the game's assets. User-supplied NaN/Infinity is
+invalid. Known unchanged dormant native noise data may be preserved by 01/02;
+that is not permission to introduce non-finite values elsewhere.
+
+4. Tool 02 — Editable JSON → World
+
+Select the edited project JSON and its matching original .world. The source
+path is filled from the project; browse to the correct file if it was moved.
+The source checksum must still match. If gameplay changed the world after
+export, export the current world again and reapply your intended edits.
+
+Keep original-world backup is enabled by default. Back up and update World
+creates a timestamped same-folder backup, builds from that copy, validates the
+result, and replaces the original .world path. There is no separate output-path
+step. If backup retention is disabled, the backup is removed only after a
+successful verified replacement; failure does not intentionally discard it.
+
+New planet name optionally overrides the project's name. Editing this field
+can automatically enable star-map synchronization; check the checkbox before
+saving. For synchronization select the universe folder containing
+universe.chunks. This database is separately backed up and updated. Without
+synchronization, the world name can change while the star map retains its name.
+Existing character teleport bookmarks may retain their old targetName; delete
+and recreate those bookmarks in the game. The tools do not edit .player files.
+
+02 changes WorldMetadata and synchronizes supported duplicate metadata fields.
+Saved tile sectors, entity sectors and unique-index records are retained; it
+does not regenerate existing terrain, remove buildings or resize the world.
+Terrain/material/ore/placeable template edits mainly affect future generation.
+Changing a template in JSON does not repaint existing saved blocks. Background,
+audio, weather and spawn rules can take effect when the world reloads. For
+existing terrain changes, choose the relevant 03 operation deliberately.
+
+5. Tool 03 — Loading and common controls
+
+Select the full storage/universe folder containing universe.chunks. Select the
+matching game's Assets folder or packed.pak, then Load generated systems.
+The catalog lists saved systems with matching .system files. Filter by system
+name or X:Y:Z and select a system; choose the target planet/moon on the second
+page before editing its other pages.
+
+Assets supply new bodies, biome recipes, materials, weather/spawn validation,
+images and dungeon choices. Use the actual game's resources. Some catalogs
+discover installed sources, but arbitrary Mod/.patch combinations are not a
+promise of full game-load-order merging, particularly for tile replacement.
+Image paths are asset paths, not arbitrary picture files on your computer.
+Native background generation also requires the matching game's server binary;
+use matching Starbound/OpenStarbound assets and installation.
+
+When a matching .world exists, actual saved dimensions, generation settings and
+environmental values are read from it. A source preset label is not proof of
+the world's actual dimensions. Empty/disabled controls can mean that a body
+type has no applicable field. Scroll each page to reach all modules.
+
+The seven pages, in order, are described below. Red labels and raised stars
+mark generation parameters associated with a reset when changed and saved;
+some displayed source fields are read-only. Read the final save plan as well.
+
+6. System page
+
+Coordinate X/Y/Z relocates the system. On save, destination collisions are
+checked, existing .system/.world files are copied to the new coordinate and
+their internal coordinates are updated. Source copies are retained. A move
+alone preserves terrain and buildings. A concurrent recipe change still has
+its own reset effect.
+
+System name is the star-system name. Rebuild all body names from system name
+also stages regenerated planet/moon names; merely typing a system name is not
+the same as deliberately rebuilding every body name. System seed is read-only.
+
+Star typeName and Description set the star's type/display information.
+System-view star image controls the central star inside the system.
+Universe-map star frames and frame background control its small animated map
+appearance; they are separate resources. Image scale, magnitude and minimum/
+maximum brightness tune the corresponding display properties. Space threat
+level applies to space encounters, not every planet's biome difficulty; use
+the provided 1–6 choices. These display/space edits do not reset planet terrain.
+
+The More Planet Info (MPI) name warning checks that mod's parsing convention.
+When using its numeric badge, end the complete name with ^green;I^white;
+through ^green;XX^white;, with no earlier lowercase "green" and no text after
+the suffix. A prefix such as ^#46D6A0; can supply color. MPI is a separate mod;
+the editor's warning does not install or redefine it. Save system commits this
+page; it has no separate System Apply button.
+
+7. Planets and moons page
+
+The body tree selects a planet or moon. Planet orbit and Moon orbit reposition
+it; a moon also has its parent's planet orbit. Occupied destinations are
+rejected. Orbit-only changes preserve existing saved content by copying to the
+new world filename; affected cockpit .clientcontext references are updated with
+backups. Vanilla slots allow 11 planet orbits and 3 moon orbits per planet.
+
+Body name, typeName, description, small image, smallImageScale, imageScale,
+world/large-image hue shift and global directives edit the applicable display
+or environmental metadata. Apply body fields stages them. For Terrestrial
+bodies, typeName also selects the large cockpit-view profile in celestial.config;
+its visible label and large-image style are coupled by the game. A direct
+large image path is usable only for FloatingDungeon. Ordinary system-map
+diameter comes from numeric world width and the game's planetSizes thresholds,
+not either raw image scale. World hue/global directives can affect rendering
+inside the world as well; these are not the saved-tile hue-copy operation.
+Global directives accepts one directive or a JSON array of directive strings.
+
+Kind, world type, source size, actual width/height, system-map diameter,
+source terrestrial types, primary-biome/count, body seed and generated-world
+path provide context and are read-only here. Edit size in World parameters and
+generation biomes in Ordered biomes. Gravity is shared with World parameters;
+changing gravity alone does not clear sectors.
+
+New celestial type creates a fresh body from Assets: a Barren Planet, Gas
+giant, Asteroid field, Ancient gateway or experimental Outpost orbital copy.
+New planet size applies to the ordinary Planet. Add as planet adds a new orbit;
+Add as selected planet's moon uses the selected parent (or a selected moon's
+parent). Planet, Gas giant, Asteroid field and Ancient gateway support this
+satellite operation. Outpost is an independent FloatingDungeon and cannot be
+added as a moon. A new body does not erase other worlds.
+
+The Outpost copy is an independent location, not the unique vanilla quest
+InstanceWorld. Do not expect full original story state or shared quest progress.
+Non-terrestrial bodies do not gain terrestrial terrain controls merely by being
+placed in a planet/moon slot. System stations belong on System objects instead.
+
+Remove from star map stages removal of the selected body; removing a planet
+also removes its attached moons from the map. Existing world files are retained
+as orphaned files, not automatically deleted. Save system commits creation,
+removal and other staged changes.
+
+8. World parameters page
+
+Size template preset, World width and World height control Terrestrial world
+dimensions. A preset supplies dimensions; direct integer dimensions permit a
+custom size. Resizing rescales the current generation recipe's height-dependent
+values and causes a whole-world reset when saved. The current source preset
+can differ from the actual numeric size. Do not resize merely to alter a map
+icon unless you also intend to regenerate the world.
+
+Gravity, Day length and Weather pool are environmental metadata. Weather input
+uses [[weight, "clear"], [weight, "rain"], ...]; the game uses relative weights.
+Use existing weather IDs and the required positive/non-negative values. A
+Terrestrial weather pool needs a valid nonempty weighted pool. Unchanged valid
+source weather is retained; blank is not a universal "clear" instruction.
+These fields alone do not reset terrain.
+
+Sky and light colors has nine fields: mainColor; morningColors, dayColors,
+eveningColors, nightColors; morningLightColor, dayLightColor, eveningLightColor,
+nightLightColor. The four *Colors gradients each require exactly two colors;
+the other fields take one color. Colors may be native color strings or RGB/RGBA
+arrays. Preserve JSON quotes for strings. Blank fields retain existing values.
+Changing these colors updates metadata without deleting saved sectors.
+
+Vertical generation layer selects Space, Atmosphere, Surface, Subsurface,
+Underground layers or Core as available. Minimum height is the layer boundary;
+Base height is its terrain reference, not necessarily every surface tile's Y.
+Keep heights ordered and inside the world. Changing these generation heights
+causes a whole-world reset. Switching layers retains staged edits; Apply world
+parameters applies all edited layers for this body, not just the visible layer.
+
+Real generation dungeons is the actual structure-generation list for the
+selected layer. Dungeon X variance changes their horizontal placement variance.
+Changing either is a generation change and resets an existing world on save.
+Choose entries from the real asset catalog; clearing its list means no entries.
+
+Star-map display dungeons (MPI) is a separate display-only list. It neither
+creates nor removes actual dungeons and does not reset terrain. Its choices
+come from MPI's display catalog; images/text remain defined by that mod. It is
+available for Space, Atmosphere, Surface and Subsurface on a body with an
+existing world. For a missing world or a world being regenerated, the override
+is deferred so the real dungeon recipe can be used for generation. After the
+world exists, reopen 03 and save the display list again. Do not use the real
+dungeon list simply to add an MPI icon. Finish with Apply world parameters,
+then Save system.
+
+9. Ordered biomes page and its dialogs
+
+9.1 Layer, ordered lists and ranges
+Choose Generation layer and Main regions or Sub-regions. The first entry is
+primary. Add from assets, Remove, Move up and Move down change that ordered
+recipe. Catalog labels may include a top-folder prefix; the actual biome name
+is saved. Complete region recipes travel with the entries.
+
+Secondary-region size range and Sub-region size range are shared random
+relative weights, not fixed per-biome X endpoints or normalized 0–1 boundaries.
+The Sub-region range requires minimum ≤ maximum, with maximum < 1.
+Use Generated biome regions for explicit coordinates after a world exists.
+Switching layer/group retains drafts. Apply biome order stages every edited
+Layer/Main/Sub group for this body. Main/Sub counts are paired automatically:
+missing Sub slots use corresponding Main entries; excess trailing Sub entries
+are trimmed, with a report. Actual order, range or recipe changes reset the
+whole existing world when Save system is confirmed.
+
+9.2 Ordered backgrounds and reapplying the same order
+For an existing world with repeated/wrong backgrounds from an Ordered setup,
+select the relevant layer, explicitly click Apply biome order with the desired
+unchanged order, then Save system. This stages a background repair; Apply alone
+does not write it. The repair gives each applicable cell its own biome parallax
+while preserving its other environmental fields and existing saved sectors.
+It does not by itself reset terrain. Merely opening the page or pressing Save
+without an explicit Apply does not request repair of an old world.
+
+Actual generation/order changes still have the whole-world reset described
+above. The native save workflow prepares and repairs eligible newly generated
+or reset non-ocean worlds with multiple biomes; an explicit request for a
+missing world can also require native generation. Keep the game shut and allow
+the private background workflow to finish. Registered Ocean/Floor backgrounds
+retain their separate pairing behavior. No Mod/config change or Allow Parallax
+Transition toggle is required for this editor operation.
+
+9.3 Edit generated species…
+Select an entry, then open this dialog for an existing .world. spawnTypes has
+one spawn-type name per line. monsterParameters is one shared JSON object
+applied to the entire profile, not a separate parameter set per species.
+The dialog initially reads the first compiled copy of that biome name;
+Save species to .world updates all compiled copies with that name throughout
+this world. It is not restricted to the displayed layer or a rectangle.
+Empty spawnTypes with an explicit parameter object clears the automatic pool;
+leaving both boxes completely blank does nothing. Valid identical input also
+needs no write. Changed world data since opening the dialog requires reopening.
+
+This direct save changes future automatic spawning rules only. It does not
+delete any saved monster or other entity, including monsters in player
+buildings, and does not clear saved blocks. Temporary runtime monsters remain
+under the game's unload behavior. Before a world exists, its species come from
+Assets; this per-world override must wait. For a coordinate-limited pool, use
+Generated biome regions → Replace monster spawns only instead.
+
+9.4 Ocean-floor pairing…
+In Surface → Main regions select an ocean, toxic, arctic or magma entry. Each
+entry has its own paired floor and settings; one ocean's values do not globally
+replace every ocean of the same name. When a repeated ocean name cannot be
+traced to an original ordered slot in World4, its actual intervals are assigned
+from left to right. The tool aligns each floor to actual generated ocean X
+intervals, not to a guessed percentage of planet width.
+
+Paired floor biome selects its ecology/appearance. Floor-biome bottom Y, Floor
+terrain height and Ocean/floor boundary Y are three different heights. The floor
+biome band extends from bottom up to the boundary; terrain height is a baseline
+for the bed, while upper water uses Ocean ecology/parallax. Smaller Y is deeper.
+Defaults come from the loaded world's appropriate layers. The saved ocean
+liquid level is the water surface; it is not any of these three fields.
+
+Keep this ocean uniform fills its required paired Sub slot with the same ocean
+recipe. That slot follows the Main ocean during edits and is locked against
+independent removal/movement in Sub. Several oceans are handled independently.
+Smooth shore-to-floor basin adds a gradual basin between solid shores and the
+bed baseline. Basin sampling width controls profile sampling; Floor ecology
+above terrain controls the ecological band. Noise/relief remain relevant, so
+the baseline is not a promise of a perfectly flat final surface.
+
+Floor .biome overrides accepts an advanced JSON object for floor materials,
+hue, species, placeables, audio and parallax. Floor region-recipe overrides
+instead controls terrain/cave/ore selectors and liquid recipe fields. Objects
+merge recursively; arrays replace their whole original arrays. These are not
+interchangeable namespaces. Keep resource references valid.
+
+Save settings only stages the pair; it does not save a .world or the complete
+system to disk. Close the dialog and Save system. Changed generation recipes
+can require a whole-world reset. For paired worlds that need creation/reset,
+the tool generates in private storage, aligns the floors, completes applicable
+nearshore plants and verifies the result before installation in the save.
+No intermediate manual planet visit or second save is needed for this path.
+
+Save and apply to generated .world is a direct operation for a compatible
+existing world without a pending whole-world reset. It applies the body's
+complete ocean pairing, not only an isolated currently visible row. It backs
+up the world and resets affected sectors under the detected ocean intervals,
+including their saved buildings/entities. It is not a background-only change.
+If creation/reset is required, settings remain staged for Save system instead.
+Reapplying an unchanged order alone does not requeue a previously completed
+ocean-floor build. Existing genuinely pending/changed pairs still follow their
+own application and reset confirmations.
+
+Pair configuration is kept in the editor's local application-data cache,
+separately for each universe/body. An unchanged old pending body without a
+.world is not created just because an unrelated system setting was saved.
+Legacy pending recovery can resume once its world exists and the game is shut.
+
+9.5 Ocean ecology and local reset limits
+Curved floor ecology covers at least 4 tiles above terrain; explicit larger
+values remain. Floor layout bands remove plants/monster pools in the first
+4 tiles below water, tall aquatic plants through 30, and microdungeons through
+150. Ocean trees are allowed only in its shallow 0–30 band; underwater bush,
+grass and grass modifiers may remain. Ordinary underwater Ocean objects and
+its monster pool are removed. Allowed plants still require entries in Assets.
+These are noisy native layout bands, not exact fences for every entity.
+
+Extra native plant completion covers only 600 horizontal tiles seaward from
+each actual solid shore. The separate island guard extends through 750 tiles;
+beyond it native islands and above-water ecology can return. Neither value is
+the floor-band height. Large layer dungeons are not local pairing prefabs;
+dungeons intersecting reset sectors can be lost. Cutting biome plants does not
+make them automatically regrow. Local pairing does not add a runtime regrowth
+mod or guarantee that all original structures survive the affected sectors.
+
+10. System objects page
+
+The list contains objects in this system's .system, with type, orbit target and
+UUID. A space station is a SystemObject, not a planet or moon. Select New
+station type from Assets, choose the system center/body as Orbit target, and
+Add space station. Select an existing row to edit it or Remove selected object.
+
+Orbit radius is map distance. Initial angle uses 0° right, 90° up, 180° left,
+270° down. Direction is +1 or -1. Instance parameters is a JSON object:
+displayName is the selected object's map title; description its information;
+icon an asset image path; bookmarkIcon a bookmark key. The asset object type
+still supplies destination/warp action, speed and sky. A temporary ship/anomaly
+can later despawn or be regenerated and lose its saved override.
+
+Apply station orbit stages the orbit and parameter fields. Save system writes
+the .system changes with backup. These edits do not reset planet sectors and
+do not edit the station's internal dungeon terrain or confer Outpost story state.
+
+11. Generated biome regions page — direct single-rectangle editing
+
+11.1 Target, coordinates and operation
+Select a Terrestrial body with an existing .world and matching Assets. Choose
+Operation, enter X start/end and Y start/end, and choose lower/upper sector
+rounding for each edge independently. Finite decimals are accepted here;
+rounding happens before the final rectangle is validated. The confirmation
+shows effective inclusive bounds aligned to 32×32 sectors. X can wrap around
+the planet; Y increases upward and cannot wrap. Check the resulting interval,
+especially near the horizontal seam or a narrow adjacent biome.
+
+Apply regions to .world reads the current form and writes that operation
+directly. There is no queue or Add/update step. Later applications may overlap
+earlier rectangles. A pending whole-world generation reset blocks direct edits;
+save/finish that generation first, then reload and apply the local edit.
+
+11.2 Biome / parallax — Full biome
+Choose the target biome with Parallax only unchecked. Assets compile its full
+recipe: terrain, caves, ores, liquids, plants/placeables, spawns, audio and
+parallax. This also works for a biome not previously compiled in the world.
+Selected saved sectors are reset; their buildings, objects, plants, liquids
+and entities are removed. Other sectors are not selected for replacement.
+This is local regeneration, not a whole-world reset, unless the chosen area
+covers the whole world. Saved tiles have no reliable player/natural ownership
+flag; Full biome cannot preserve only the player's structures in its sectors.
+
+Colors prefer an explicit override, then an existing same-biome native hue in
+this world, otherwise a stable world-seed/biome choice. Valid hue 0 is retained;
+changing rectangle coordinates does not randomly select a new color.
+
+11.3 Biome / parallax — Parallax only and custom JSON
+Check Parallax only to change the selected environment background without
+clearing saved tiles, buildings, liquids, plants or entities. Other biome
+content is retained; this does not convert blocks, spawn pools or terrain.
+Select a biome as the background source. Custom parallax JSON optionally
+supplies the background for either Parallax only or Full biome. Browse to a
+JSON file containing a resolved Parallax object or {"parallax": {...}};
+textures must exist in game assets. This field is a file path, not pasted JSON.
+The write is already committed by Apply regions to .world. Reload the world
+to see it; a subsequent main Save is not required for this direct edit.
+
+11.4 Replace tiles only — One materialName → another
+Load material names from Assets or type the source and destination materialName.
+Names come from .material files recursively under tiles/materials. Use values
+such as dirt, not an inventory itemName, translated display name or numeric ID.
+Choose foreground, background or both. Preview counts matching saved material
+layers and reports risks; confirm to replace those material IDs only.
+
+No sectors are cleared and missing terrain is not generated. Hue, paint,
+modifiers, liquid data, other tile fields and object/plant/entity records are
+preserved. Foreground/both rejects incompatible collisionKind. Different
+falling/support/liquid behavior can nevertheless move blocks or detach objects
+when the game runs; keeping entity records is not a guarantee of unchanged
+physics. Player structures with matching materials are included. No match or
+same material means no write/backup. If the world or selected material
+definitions change after preview, refresh and preview again.
+
+11.5 Replace tiles only — Convert to a biome block arrangement
+Choose Target biome palette and foreground/background/both. The tool maps
+eligible saved main/sub-block roles to that biome's palette, keeping existing
+clump arrangement. It does not change biome indexes, terrain shape, hue/paint/
+mod bytes, liquids or entities and does not run a full biome regeneration.
+Eligibility uses the saved block-biome's natural material table, not a reliable
+history of who placed a tile; player-placed matching materials may also qualify.
+Null block-biome index 0 has no usable source palette and is preserved/reported.
+
+Hard boundary stays within the rounded rectangle. Optional Starbound-style
+fuzzy boundary samples saved block/blend noise on a 4-tile grid; it can include
+tiles outside and exclude tiles inside the nominal rectangle. The preview
+reports both counts. Confirm the actual scope, especially near buildings.
+Collision/behavior and stale-preview cautions also apply to this module.
+
+11.6 Replace monster spawns only
+The left preview groups the selected area's current pools by biome. Refresh
+selection updates it. The right input replaces the complete automatic
+spawnProfile throughout the rectangle, including shared parameters; it does
+not append to old pools. Keep the outer spawnProfile and both inner fields.
+For example, this explicitly clears the pool:
+  {"spawnProfile": {"monsterParameters": {}, "spawnTypes": []}}
+To populate it, replace [] with an array of valid spawn-type names from the
+game's resources. These are spawnTypes, not arbitrary /spawnmonster IDs.
+Blank input does nothing. The parameter object is shared across all entries;
+there is no per-species parameter editor here.
+
+All saved entities, including saved monsters in player buildings, and all
+saved tile sectors remain untouched. This changes future automatic rules;
+temporary runtime monsters follow the game's unload lifecycle. Native layout
+blending/placement can affect nearby edges, so the rectangle is not a hard
+fence for future monster positions. New layout boundaries can also affect edge
+environment/liquid sampling and future terrain blending without regenerating
+existing saved terrain. A capacity case that would require rewriting saved
+tile records is rejected. This module differs from Ordered's species dialog,
+which changes every compiled copy of the selected biome name in the world.
+
+11.7 Ocean / ocean-floor options for this rectangle
+With a full ocean/toxic/arctic/magma biome, set the absolute water-surface Y.
+It may remain an ocean rectangle or Add a paired ocean floor. With pairing,
+choose floor biome, bottom Y, terrain baseline, Ocean/Floor boundary, uniform
+ocean, smooth basin, sampling width and ecology height. Floor bottom, baseline
+and boundary must follow the rectangle's valid ordering. The absolute water
+surface must remain within world height and may lie above a submerged rectangle.
+
+Directly choosing oceanfloor, toxicoceanfloor, arcticoceanfloor or magmaoceanfloor
+creates only a floor region; it does not secretly add an upper ocean. The floor
+ecology follows the curve and ends below the liquid surface; unsafe relief is
+flattened. These are Full biome operations and reset the selected sectors.
+Their local parameters do not overwrite the planet-wide Ordered pairings.
+The shared ecology/shore limits in section 9.5 still distinguish the relevant
+bands; Parallax only does not run a floor/terrain regeneration.
+
+12. Copy material hue/color page
+
+Enter integer coordinates for Reference rectangle and Target rectangle within
+the selected generated world. These are exact tile ranges, not the Generated
+page's decimal/sector-rounding form. X may wrap; Y must increase. Analyze
+reference reads the available styles without saving.
+
+Apply hue/color to .world copies each matching material ID's dominant reference
+hue and color variant to saved target tiles, treating foreground and background
+separately. Target materials absent from the reference stay as they are. This
+copies styles by material, not a pixel-for-pixel picture or whole biome. Material
+IDs, terrain, liquids, objects, entities, biome metadata and parallax remain
+unchanged. There is no sector reset. It writes directly with a retained backup;
+it does not wait for Save system and is blocked by a pending whole-world reset.
+
+13. Final save, recovery and common problems
+
+For staged 03 edits, close game/server, apply each module and click Save system
+to universe.chunks. The save collects body/world/layer/biome drafts, validates
+them, plans metadata updates/migrations/resets, and asks for the relevant
+confirmations. Apply station orbit before saving its form. Read the world count
+and reset scope carefully. Several pages can affect the same body's save.
+Private native generation may take minutes; keep the editor open until success
+or an error, and do not launch the game during it. Input validation and file
+verification do not make a destructive reset reversible without its backup.
+
+02 and direct 03 edits normally create a same-folder timestamped backup such
+as planet.world.bak_before_edit_<timestamp>. Main saves also back up affected
+databases/system/client-context data as appropriate. Keep the paths shown by
+the result dialog. Whole-world reset backups contain the previous world;
+non-native replacements may be generated on a later game visit where indicated.
+
+To recover, close the game, server and editor. Preserve the current edited files
+separately, then copy the matching backup back to the exact original filename.
+For a system/orbit change restore the corresponding universe.chunks, .system,
+.world and affected .clientcontext backups consistently, not an unrelated old
+world alone. Keep a copy of local ocean-pair configuration when preserving a
+complete editor setup; its cache is separate from the universe folder.
+
+If a world is missing, 01/02 cannot export/import it and the three direct-world
+pages/dialogs cannot edit its saved sectors/species. Create/visit the appropriate
+world first, except where 03 explicitly offers native creation during Save.
+MPI display overrides must wait as described above. If a resource is missing,
+select the matching Assets and correct its ID/path. If the source changed or
+is occupied, leave/close the game, reload the current source and retry the
+intended operation; do not bypass the check. The native nonempty biome-index
+limit is 255; index 0 legitimately means no biome, not a damaged entry.
+
+For an error retain the message, relevant backup and
+starbound_world_editor_05.log in the selected universe folder. The historical
+05 in this diagnostic filename does not mean another launcher is required.
+If JSON template edits do not alter old terrain, use the correct explicit
+tile/region operation; if backgrounds appear unchanged, fully unload/reload
+the target world and verify the chosen layer/area. Never select Full biome as
+a harmless substitute for a background-only edit.
+
+======================================================================
+中文
+======================================================================
+
+1. 交付目录与启动
+
+完整解压后，请将下列内容放在同一目录：
+  script/
+  01_Export_World_to_JSON.exe
+  02_Import_JSON_to_World.exe
+  03_Celestial_System_Editor.exe
+  User_Guide.txt
+
+三个 EXE 是 Windows 启动器，内部没有捆绑 Python。需要安装 Python 3.8 或更高版本，
+并包含 Tkinter/Tk。请完整保留 script 目录中的 Python 模块、图标与原生标题栏 DLL，
+不要重命名 EXE，也不要混用不同版本的文件。右上角 Language 可即时切换英文、中文、
+德文；默认语言是英文。
+
+若启动器找不到 Python，可把环境变量 PYTHONW_EXE 设置为你的 pythonw.exe，或在
+解压后的包根目录运行对应命令：
+  python script/world_to_json_gui.py
+  python script/json_to_world_gui.py
+  python script/celestial_system_editor_gui.py
+
+2. 保存与重置：先选对操作
+
+编辑器中的普通 Apply 和写入磁盘不是同一操作。“应用天体参数”“应用世界参数”
+“应用 Biome 顺序”“应用空间站轨道”先把改动暂存在编辑器模型中；最后点击
+“保存星系到 universe.chunks”才提交。未保存便关闭或重新载入会丢失这些改动。
+物种、区域、色相和海床窗口中明确写着 .world 的保存／应用按钮，则在确认后直接
+写入所选世界，不等待底部的“保存星系”。
+
+各流程对世界的影响：
+  01 导出：读取 world 并生成 JSON，不重置世界。
+  02 导入：更新元数据，保留已保存 sector 和实体。
+  03 名称、外观、环境元数据、仅迁移轨道：生成配方不变时不重置地形。
+  03 尺寸、生成层高度、真实地牢列表／位置差异、有序 Biome 的实际配方／顺序／
+     范围变更：保存后重置整颗受影响世界。其替代世界不保留原地形、建筑、液体和
+     实体；旧 world 留在备份中。
+  03 原顺序不变，重新 Apply 后 Save：背景修复本身仅改元数据，不清除已有 sector。
+  03 完整 Biome 区域：局部重置实际选中的 sector。
+  03 立即应用海床：按该天体完整配对设置，局部重置实际探测海洋区间下的相关 sector。
+  03 仅 Parallax／两种怪物池编辑：不重置已保存 sector。
+  03 物块替换／色相复制：只改指定的已保存 tile 字段，不重生成 sector；新材质的
+     物理行为仍可能在游戏运行后影响结果。
+
+02 导入、03 主保存、海床应用、物种编辑、色相复制前，请完全退出 Starbound 及服务器。
+只有“已生成 Biome 区域”页允许游戏留在其他世界：先离开目标星球并等待卸载，完成前
+所有玩家都不得停留或返回。工具会检查目标文件占用与变化；不要提前回到目标世界。
+对重要存档进行破坏性修改前，另外保留一份完整 storage 备份。
+
+3. 工具 01——World → 可编辑 JSON
+
+选择现有 Starbound 或受支持 OpenStarbound 的 .world，点击“开始导出”。原 world
+始终不变。JSON 自动生成在同目录，名称为 tmp_<原 world 完整文件名>.json；同名文件
+已存在时需要确认替换。可通过“打开 JSON”“打开所在文件夹”查看结果。导出不需要
+Assets；请读取稳定的文件，建议先关闭游戏。
+
+精简项目包含五个主要参数组：
+  source：原始路径、校验值、尺寸与 Biome 数量，用于确认正确来源；不要修改这些
+     字段来绕过导入检查。
+  world：名称、天气、重力、昼长、刷怪、出生点、空气、传送、状态效果等世界参数。
+  sky：天空颜色、光照、地平线图片／云层、卫星及天空边界。
+  terrain：生成层／cell、地形 selector、噪声与混合。
+  biomes：物块、矿物、spawnProfile、Parallax、声音及 placeables。
+     完全相同的编译副本共用一个 parameters 对象；indexes 列出这个对象适用的
+     原 Biome 编号。
+
+修改参数后保存为有效 UTF-8 JSON，保持原有数据类型及数组／对象结构。天气使用权重
+条目，资源名必须存在于游戏 Assets。用户新输入的 NaN／Infinity 无效。01／02 可以
+保留已知且未改动的休眠原生噪声数据，但这不允许在其他位置任意加入非有限数。
+
+4. 工具 02——可编辑 JSON → World
+
+选择编辑后的项目 JSON 及其对应原始 .world。工具从项目填写来源路径；如果文件
+移动过，请重新浏览到正确原件。来源校验值必须仍匹配。若导出后游戏已保存新内容，
+请重新导出当前 world，再把所需改动应用到新 JSON。
+
+“保留原 world 备份”默认勾选。“备份并更新 World”会先在同目录创建带时间戳的
+备份，从该副本构建修改版，验证后替换原 .world 路径；没有另填输出路径的步骤。
+取消保留时，也只会在验证并成功替换后删除备份；失败不会主动丢弃故障备份。
+
+“新星球名称”可覆盖项目中的名称。编辑此项可能自动勾选星图同步，请在提交前检查。
+同步时选择包含 universe.chunks 的 universe 目录；工具会另外备份并更新该数据库。
+不同步时，进入世界后的名字可以改变，星图仍显示旧名。角色已保存的传送书签可能
+保留旧 targetName，请在游戏中删除后重新建立。工具不会改写 .player。
+
+02 修改 WorldMetadata，并同步支持的重复元数据字段。已保存 tile sector、entity
+sector 与 unique 索引记录保留，不重新生成旧地形，不删除建筑，也不改变世界尺寸。
+地形／物块／矿物／放置物模板主要影响今后生成，改 JSON 模板不会自动给旧物块换材质。
+背景、声音、天气和刷怪规则可在世界重新加载后生效。需要修改已保存地形时，请明确
+选择 03 的相应操作。
+
+5. 工具 03——载入与公共区域
+
+选择包含 universe.chunks 的完整 storage/universe 目录，并选择匹配游戏的 Assets
+目录或 packed.pak，然后“读取已生成星系”。列表显示有对应 .system 文件的已保存
+星系，可按名称或 X:Y:Z 筛选。选择星系后，先在第二页选中行星／卫星，再编辑其余页面。
+
+Assets 提供新天体、Biome 配方、物块、天气／刷怪校验、图片与地牢选项。请使用实际
+游戏资源。部分目录能发现安装资源来源，但不能据此认为任意 Mod／.patch 组合都已按
+游戏载入顺序完整合并，尤其是物块替换。图片路径应是游戏资源路径，不是电脑上任意
+图片文件。原生后台生成还需要匹配游戏的服务器程序；Starbound／OpenStarbound 的
+安装目录与 Assets 应相符。
+
+已有对应 .world 时，工具读取其中实际尺寸、生成设置和环境值。来源预设标签不代表
+实际数值尺寸。空白／禁用字段可能表示该天体类型不适用。页面可以滚动，请查看下方
+模块。七页按以下顺序排列。红色标题与右上角星号标记关联整星重置的生成参数；部分
+只是只读来源显示。修改后仍应核对最终保存计划。
+
+6. “星系”页
+
+X/Y/Z 坐标用于迁移星系。保存时检查目标位置冲突，把现有 .system／.world 复制到新
+坐标并同步内部坐标，来源副本保留。单独移动保留地形和建筑；同时修改生成配方仍有
+对应的重置影响。
+
+“星系名称”修改恒星系名字。“根据星系名称重建全部天体名称”还会暂存新行星／卫星
+名称；仅输入星系名不等同于主动重建所有天体名字。“星系种子”只读。
+
+Star typeName 和描述设置恒星类型／显示信息。“星系视角恒星图片”控制系统内中央
+恒星；“宇宙星图恒星帧”及其背景控制外层导航图的小型动画，两者是独立资源。
+图片缩放、Magnitude、最小／最大亮度调整对应显示属性。Space threat level 用于
+太空遭遇，不是把每个行星群系难度统一修改；使用下拉框的 1–6。上述显示／太空参数
+本身不重置星球地形。
+
+More Planet Info（MPI）名称提示针对该 Mod 的解析规则。需要其数字徽标时，完整名字
+结尾应为 ^green;I^white; 到 ^green;XX^white;，前面不得更早出现小写 green，后面
+不得再加文字。前缀可用 ^#46D6A0; 等颜色。MPI 是独立 Mod，此提示不会安装或改写它。
+本页没有独立“星系 Apply”按钮，最后用“保存星系”提交。
+
+7. “行星与卫星”页
+
+天体树用于选择目标。行星轨道和卫星轨道用于换位；卫星同时记录所属行星轨道。
+目标已占用时拒绝。仅换轨道会把现有 world 保留性复制到新文件名，并备份／更新
+受影响的驾驶舱 .clientcontext 引用。原版槽位为 11 个行星轨道，每颗行星 3 个卫星轨道。
+
+天体名称、typeName、描述、小图、smallImageScale、imageScale、世界／大图 hueShift
+及 globalDirectives 修改相应外观或环境元数据；“应用天体参数”仅暂存。
+Terrestrial 的 typeName 同时选择 celestial.config 中驾驶舱大图样式，游戏把显示
+标签与大图样式绑定。只有 FloatingDungeon 能直接填写大图路径。普通星系视角直径由
+实际世界宽度与游戏 planetSizes 阈值决定，不由两个原始图片缩放值直接决定。
+世界 hueShift／全局指令也可能影响世界内部渲染，不是修改已保存 tile 的色相复制。
+全局指令可填一条 directive，或由 directive 字符串组成的 JSON 数组。
+
+类别、world 类型、来源尺寸、实际宽高、星系视角直径、来源 terrestrial types、
+主要 Biome／数量、天体种子、world 路径在此只读，用于核对。尺寸在“世界参数”页
+修改，生成群系在“有序 Biome”页修改。重力与“世界参数”共用；单改重力不清 sector。
+
+“新天体类型”从 Assets 创建新天体：默认 Barren 的 Planet、Gas giant、Asteroid
+field、Ancient gateway，或实验性 Outpost 轨道副本。“新行星尺寸”用于普通 Planet。
+“添加为行星”分配新轨道；“添加为所选行星的卫星”使用所选父星（选卫星时使用其
+父星）。Planet、Gas giant、Asteroid field、Ancient gateway 支持此卫星入口；
+Outpost 是独立 FloatingDungeon，不能添加为卫星。新增天体不会清除其他世界。
+
+Outpost 副本是独立地点，不是原版唯一剧情 InstanceWorld，不保证完整原版剧情或
+共享任务进度。非 Terrestrial 天体不会因为放进行星／卫星槽位就获得陆地世界控件。
+真正空间站应在“星系对象”页处理。
+
+“从星图移除”暂存所选天体的删除；删除行星也会把其所属卫星从星图移除。现有 world
+文件保留为孤立文件，不自动删除。新增、移除与其他暂存变化最终由“保存星系”提交。
+
+8. “世界参数”页
+
+大小模板预设、世界宽度、世界高度控制 Terrestrial 尺寸。预设提供尺寸，也可直接
+填写自定义整数宽高。缩放会调整当前生成配方中依赖高度的值，保存后重置整颗世界。
+来源预设可能不同于实际数值尺寸。若只想改变星图图标，不要在无意重生成世界时改宽高。
+
+重力、昼长、天气池属于环境元数据。天气格式为 [[权重, "clear"], [权重, "rain"],
+...]，按相对权重使用。天气 ID 必须存在，数值须符合字段的正数／非负要求；
+Terrestrial 需要有效非空天气池。未改动的合法来源天气保留；空白不通用于“清空”。
+这些字段本身不会重置地形。
+
+“天空与光照颜色”有九项：mainColor；morningColors、dayColors、eveningColors、
+nightColors；morningLightColor、dayLightColor、eveningLightColor、nightLightColor。
+四个 *Colors 渐变各需两个颜色，其余字段各需一个颜色。可用原生颜色字符串或 RGB／RGBA
+数组；字符串保留 JSON 引号。空白保留原值。改色只同步元数据，不删除已保存 sector。
+
+“纵向生成层”按天体现有结构选择 Space、Atmosphere、Surface、Subsurface、各
+Underground 或 Core。最低高度是层边界，基准高度是地形参考，不是每格表面的实际 Y。
+高度须有序且在世界范围内；修改这些生成高度会整星重置。切换层保留草稿；一次
+“应用世界参数”会应用本天体所有已编辑层，不只当前可见层。
+
+“实际生成 Dungeon”是真正生成结构的列表；Dungeon X variance 是其横向位置差异。
+修改任一项属于生成变化，保存后重置已有世界。请从真实 Assets 目录选择；清空列表
+表示没有条目。
+
+“星图显示 Dungeon（MPI）”是另一份仅供显示的列表，不创建或删除真实地牢，不重置
+地形。选项来自 MPI 显示目录，图标／文字由 Mod 定义。仅已有 world 的 Space、
+Atmosphere、Surface、Subsurface 可用。缺 world 或本次正在重生成时，显示覆盖会延期，
+以便首次生成继续使用真实地牢配方。world 生成后，重新打开 03，再保存显示列表。
+不要为了添加一个 MPI 图标而修改真实 Dungeon 列表。最后“应用世界参数”再“保存星系”。
+
+9. “有序 Biome”页及其窗口
+
+9.1 生成层、顺序与范围
+选择生成层及 Main regions／Sub-regions；第一项是主项。通过从 Assets 新增、移除、
+上移、下移编辑顺序。目录标签可带顶层文件夹前缀，实际保存的是 Biome 名；完整区域
+配方随条目移动。
+
+Secondary-region size range 与 Sub-region size range 是共用的随机相对权重，
+不是每个 Biome 的固定 X 起止点，也不是归一化的 0–1 位置范围。Sub-region 范围须
+满足最小值 ≤ 最大值，且最大值 < 1。world 已生成后，需要明确坐标请使用“已生成 Biome 区域”。
+切换层／组会保留草稿。“应用 Biome 顺序”暂存本天体所有已编辑 Layer／Main／Sub。
+两组数量自动配对：Sub 不足时按位置补对应 Main，多出时裁掉末尾，并给出报告。
+实际顺序、范围或配方改动在确认“保存星系”后会重置整颗已有世界。
+
+9.2 有序群系背景与原顺序重新应用
+已有世界若出现有序群系背景重复／错配，选择相关层，保持所需顺序不变，明确点击
+“应用 Biome 顺序”，再“保存星系”。Apply 只登记背景修复，不立即写盘。修复让
+适用 cell 使用自身 Biome 的 Parallax，保留其他环境字段及已有 sector，本身不重置
+地形。只打开页面或未明确 Apply 便点 Save，不会请求修复旧 world 的背景。
+
+实际改动顺序或生成配方，仍按上文整星重置。原生保存流程会为适用的非海洋多 Biome
+新世界／重置世界提前生成并修复背景；明确应用到缺失 world 的请求也可能需要原生
+生成。保持游戏关闭，等待私有后台流程完成。已登记 Ocean／Floor 背景保留独立配对
+逻辑；此编辑器操作不需要修改 Mod／config 或切换 Allow Parallax Transition。
+
+9.3 “编辑已生成物种…”
+选中条目后，为已有 .world 打开此窗口。spawnTypes 每行一个生成类型名；
+monsterParameters 是整份 profile 共用的一份 JSON 对象，不能给每个物种单独设置。
+窗口先显示同名 Biome 的首个编译副本；“保存物种到 .world”会更新该世界全部同名
+编译副本，不局限当前层或一个矩形。spawnTypes 留空、参数显式填对象时会清空自动
+怪物池；两个框都完全空白则不操作。合法内容已相同时也无需写入。窗口打开后 world
+发生变化，需要重新打开，不能覆盖旧快照。
+
+此直接保存仅修改今后自动刷怪规则，不删除任何已保存怪物或其他实体，包括玩家建筑
+里的怪物，也不清除物块。临时运行时怪物仍按游戏卸载逻辑处理。尚无 world 时，物种
+来自 Assets，需待生成后才能写这种覆盖。只改某块坐标范围的怪物池，请用“已生成
+Biome 区域 → 仅替换区域怪物生成”。
+
+9.4 “海洋—海床配对…”
+在 Surface → Main regions 选择 ocean、toxic、arctic 或 magma。每个条目各有自己
+的海床及参数，不会按名字把所有同类海洋统一覆盖。同名海洋重复出现、World4 又不能
+还原原有序槽位时，按实际区间从左向右分配。工具依据真正生成的 Ocean X 区间对齐海床，
+不按猜测的星球宽度百分比定位。
+
+配对 Floor Biome 决定海床生态／外观。“海床 Biome 下边界 Y”“海床地形基准高度”
+“Ocean／Floor 上分界 Y”是三个不同值：Floor Biome 从下边界延伸到上分界，地形高度
+是海床基准；上方水域使用 Ocean 生态／背景。Y 越小越深。默认值取自当前世界对应层。
+已保存 oceanLiquidLevel 才是液面，不等于这三个字段之一。
+
+“保持这片海洋完整”用相同 Ocean 配方填充其必需的 Sub 槽位。该槽位跟随 Main
+海洋移动，在 Sub 中不能独立删除或移动；多片海洋分别处理。“平滑海岸—海床盆地”
+在实体海岸与盆底基准间构建平滑趋势。“盆地采样宽度”控制曲线采样，“地形上方海床
+生态高度”控制生态带。仍保留噪声／起伏影响，基准高度不保证最终处处平坦。
+
+Floor .biome overrides 是高级 JSON 对象，可改海床物块、色相、物种、放置物、
+声音与 Parallax；Floor region-recipe overrides 则控制地形／洞穴／矿脉 selector
+和液体配方。对象递归合并，数组整体替换，不能混用两个参数域。所有资源引用须有效。
+
+“仅保存设置”实际上只暂存配对，不写 world，也未提交完整星系。关闭窗口后点
+“保存星系”。生成配方改变可能要求整星重置；配对世界需要创建／重置时，工具会在
+私有存档中原生生成、对齐海床、补适用岸边植物并验证，通过后交付到存档。此路径
+不需要中途手动进入星球，也不需要第二次保存。
+
+“保存并立即应用到已生成 .world”适用于兼容且没有待整星重置的已有世界，会直接
+应用该天体全部配对，不只是窗口当前一行。工具备份 world 后，重置探测海洋区间下
+受影响 sector，其中已保存的建筑／实体也会消失。这不是仅改背景。如果必须创建／
+重置，设置会留待“保存星系”。单纯重新应用完全相同顺序，不会把已完成海床再次挂为
+待处理；本来确实待处理或已改动的配对，仍按自己的应用／重置确认执行。
+
+配对设置存于编辑器本地应用数据缓存，按 universe／天体分开。无 .world 的旧待处理
+天体若设置未改，不会因保存无关星系字段而自动创建。world 已存在且游戏退出后，可
+继续旧 pending 恢复流程。
+
+9.5 海洋生态与局部重置界限
+曲线海床生态在地形上方至少覆盖 4 格，已有明确更大值保留。Floor 布局带在水面下
+前 4 格移除植物／怪物池，30 格内移除高大水生植物，150 格内移除 microdungeon。
+Ocean 树只在浅水 0–30 带允许；水下 bush、grass 和草皮可以保留，普通水下 Ocean
+物件及怪物池移除。“允许”仍需 Assets 中本来有相应植物。这些是受原生噪声影响的
+布局带，不是所有实体的精确坐标围栏。
+
+额外原生植物补全仅覆盖每侧实际实体海岸向海内横向 600 格。独立禁岛带延伸到 750 格
+且包含边界；之外可恢复原生岛屿及水上生态。两者都不是海床生态高度。大型 Layer
+Dungeon 不是局部配对预制件，和重置 sector 相交的地牢可能丢失。砍掉群系植物不会
+使它自动原地再生；局部配对不附带运行时再生 Mod，也不保证保留受影响 sector 的
+所有原有结构。
+
+10. “星系对象”页
+
+列表显示 .system 中的物件及其类型、环绕目标、UUID。空间站是 SystemObject，不是
+行星／卫星。从 Assets 选择新空间站类型，以星系中心或天体为目标，再“添加空间站”。
+选中已有行可编辑，或“移除所选物件”。
+
+轨道半径是星图距离；初始角度 0°／90°／180°／270° 分别为右／上／左／下；方向
+为 +1 或 -1。Instance parameters 填 JSON 对象：displayName 为选中后的星图标题，
+description 为说明，icon 为图片资源路径，bookmarkIcon 为书签图标键。目标／warp
+动作、速度与天空仍由资源物件类型提供。临时飞船／anomaly 日后可能消失或重新生成，
+其保存覆盖也可能失效。
+
+“应用空间站轨道”暂存轨道和参数，再用“保存星系”备份并写入 .system。该操作不
+重置星球 sector，不编辑空间站内部地牢地形，也不会授予 Outpost 剧情状态。
+
+11. “已生成 Biome 区域”页——直接编辑当前单矩形
+
+11.1 目标、坐标与操作
+选择已有 .world 的 Terrestrial 天体及匹配 Assets。选择操作，填写 X／Y 起止点，
+四条边分别选择较低／较高 sector 边界取整。此页接受有限小数，先取整再校验最终
+矩形；确认框显示 32×32 sector 对齐后的实际包含首尾范围。X 可横向环绕星球，Y
+向上增加且不能环绕。特别检查横向接缝和相邻窄 Biome 附近的最终范围。
+
+“应用区域到 .world”每次读取当前表单，直接写入该操作；没有队列，也无需添加／
+更新条目。下一次矩形可与上次重叠。若有待整星重置的生成改动，工具会阻止直接编辑；
+先保存并完成生成，再重新载入进行局部修改。
+
+11.2 Biome／Parallax——完整 Biome
+不勾选“仅 Parallax”，选择目标 Biome。工具从 Assets 编译完整配方：地形、洞穴、
+矿物、液体、植物／放置物、怪物、声音和背景；世界原来没有编译过的 Biome 也可使用。
+选中的已保存 sector 会重置，建筑、Object、植物、液体和实体都会移除；其他 sector
+不被选中重置。这是局部重生成，除非选区覆盖整世界，否则不等于整星重置。已保存
+tile 没有可靠的玩家／天然来源标记，无法在完整重生成 sector 中只保留玩家建筑。
+
+颜色优先使用明确覆盖，其次沿用本世界已有同类 Biome 原生 hue，否则按世界种子与
+Biome 稳定选择。合法 0 会保留，修改矩形坐标不会重新随机选色。
+
+11.3 Biome／Parallax——仅 Parallax 与自定义 JSON
+勾选“仅 Parallax”只改变选区环境背景，不清除已保存 tile、建筑、液体、植物或实体，
+保留其他 Biome 内容，不转换物块、怪物池或地形。Biome 是背景来源；可选“自定义
+Parallax JSON”对仅 Parallax 或完整 Biome 提供背景。浏览选择 JSON 文件，内容可为
+已解析 Parallax 对象或 {"parallax": {...}}，纹理必须存在于游戏 Assets。此输入框
+填写文件路径，不是粘贴 JSON。
+“应用区域到 .world”完成时已保存此改动，重新加载世界即可查看，不需要随后再点
+主“保存星系”。
+
+11.4 仅替换物块——materialName 一对一替换
+从 Assets 载入材质名或直接填写来源／目标 materialName。目录递归读取
+tiles/materials 下的 .material；使用 dirt 这样的 materialName，不是背包物品
+itemName、翻译显示名或数字 ID。选择前景、背景或两者，预览匹配的已保存材质层数量
+和风险提示，确认后只替换这些 material ID。
+
+不清 sector，不生成缺失地形；hue、喷漆、修饰、液体、其他 tile 字段以及 Object／
+Plant／实体记录保留。前景／两者会拒绝 collisionKind 不兼容的材质，但新材质的
+下落、支撑、液体行为仍可能在游戏运行时移动方块或使物件脱落；保留记录不保证物理
+结果完全不变。玩家建筑中的匹配材料也会处理。无匹配或同材质时不写入、不建备份。
+预览后 world 或所选材质定义改变，需要刷新并重新预览。
+
+11.5 仅替换物块——转换成 Biome 物块排列
+选择目标 Biome 材质表与前景／背景／两者。工具把符合条件的已保存主块／副块角色
+映射到目标材质，保留原有团簇分布，不改变 Biome 编号、地形形状、hue／喷漆／mod
+字节、液体或实体，也不执行完整群系生成。资格按 tile 保存的 blockBiome 天然材质表
+判断，不是可靠的放置者历史；玩家放置的同类材料也可能符合。合法 blockBiomeIndex=0
+没有来源材质表，保留并报告，不猜来源。
+
+硬边界严格限于取整矩形。可选 Starbound 风格模糊边界按已保存 block／blend noise
+在 4 格网格采样，因此会纳入部分矩形外 tile，并排除部分矩形内 tile；预览显示两类
+数量。特别注意建筑附近范围。本模块同样适用材质碰撞／行为及过期预览注意事项。
+
+11.6 仅替换区域怪物生成
+左侧预览按 Biome 显示当前选区怪物池，“刷新选区”更新显示。右侧输入完整替换
+矩形内自动 spawnProfile（包括共享参数），不是追加到旧怪物池。必须保留外层
+spawnProfile 和两个内字段。例如下面明确清空怪物池：
+  {"spawnProfile": {"monsterParameters": {}, "spawnTypes": []}}
+需要填入怪物时，把 [] 改为游戏资源中有效 spawn-type 名的数组，不是任意
+/spawnmonster ID。留空不操作。参数对象由全部条目共用，不能逐物种独立配置。
+
+所有已保存实体，包括玩家建筑内的怪物，以及全部已保存 tile sector 均保留。
+修改的是今后自动生成规则；临时怪物由游戏在卸载时处理。原生布局混合／落点调整
+可能影响边缘，因此矩形不是未来怪物位置的硬围栏。新增布局边界还可能影响附近环境／
+液体采样和未来地形混合，但不会重生成现有地形。需要重写已保存 tile 记录才能解决
+的容量情况会被拒绝。它与 Ordered 物种窗口不同：后者更新全世界全部同名编译副本。
+
+11.7 当前矩形的海洋／海床选项
+完整 ocean／toxic／arctic／magma 可填写绝对液面 Y，保持整块海洋或勾选增加配对
+海床。启用配对后设置 Floor Biome、下边界、地形基准、Ocean／Floor 分界、统一海洋、
+平滑盆地、采样宽度、生态高度。海床下边界／基准／分界须满足该矩形的有效范围与
+顺序要求；绝对液面须在世界高度内，全水下矩形的液面可以高于选区。
+
+直接选择 oceanfloor、toxicoceanfloor、arcticoceanfloor、magmaoceanfloor 只创建
+海床区域，不暗中增加上层海洋。海床生态跟随曲线并截止于液面下，不安全起伏会压平。
+这些是完整 Biome 操作，会重置选中 sector。此处局部参数不覆盖 Ordered 的整星
+配对；第 9.5 节各生态／岸边范围仍应区分。仅 Parallax 不运行海床／地形重生成。
+
+12. “复制物块色相／颜色”页
+
+在所选已生成 world 内，填写参考矩形和目标矩形的整数坐标。本页使用精确 tile 范围，
+不是 Generated 页的小数／sector 取整表单。X 可环绕，Y 必须递增。“分析参考区域”
+仅读取可用样式，不保存。
+
+“应用色相／颜色到 .world”按 material ID，把参考区占比最高的 hue 与颜色变体
+复制到目标已保存 tile，前景／背景分别处理。参考区没有的目标材料保持原样。
+这是按材料复制样式，不是逐像素贴图或复制整个 Biome。材质 ID、地形、液体、物件、
+实体、Biome 元数据、Parallax 都不变，不重置 sector。该按钮直接写入并保留备份，
+不等待“保存星系”；有待整星重置时会被阻止。
+
+13. 最终保存、恢复与常见问题
+
+提交 03 暂存改动前，退出游戏／服务器，应用各模块，再点击“保存星系到
+universe.chunks”。工具收集天体／世界／生成层／Biome 草稿，验证并计划元数据更新、
+迁移或重置，随后给出相应确认。空间站表单要先点“应用空间站轨道”。仔细检查世界
+数量及重置范围，多页可共同影响同一天体。私有原生生成可能耗时数分钟，成功或报错
+前保持编辑器打开，不要启动游戏。输入及文件验证不能让破坏性重置在没有备份时撤销。
+
+02 及直接 03 编辑通常创建同目录时间戳备份，例如
+planet.world.bak_before_edit_<timestamp>。主保存也按需备份相关数据库、.system、
+.clientcontext。保留结果窗口给出的实际路径。整星重置备份包含原 world；未走原生
+预生成的替代世界，可按工具提示在后续游戏访问时生成。
+
+恢复时先关闭游戏、服务器和编辑器，把当前修改文件另外保留，再将匹配备份复制回
+准确的原文件名。星系／轨道变化应一致恢复对应 universe.chunks、.system、.world
+和受影响 .clientcontext，不能只换一份无关旧 world。完整保留编辑器设置时也请保存
+本地海洋配对配置；缓存不在 universe 目录中。
+
+缺少 world 时，01／02 无法导出／导入，区域、色相及物种窗口也无法编辑其已保存内容。
+先创建／访问对应世界，03 保存明确提供原生创建的情况除外。MPI 显示覆盖按前文延期。
+资源缺失时，选择匹配 Assets 并修正 ID／路径。来源变化或占用时，离开／关闭游戏，
+重新载入当前来源再执行所需编辑，不绕过保护。原生非空 Biome 编号上限为 255；0
+合法表示没有 Biome，不是损坏条目。
+
+异常时保留报错、相关备份以及所选 universe 中的 starbound_world_editor_05.log。
+诊断文件名保留历史 05，不代表还需要另一个启动器。JSON 模板没改变旧地形时，应
+选择明确的 tile／区域操作；背景未见变化时，彻底卸载／重进目标世界并核对层及选区。
+不要把完整 Biome 当作无损背景替换的替代操作。
+
+======================================================================
+DEUTSCH
+======================================================================
+
+1. Paket und Programmstart
+
+Entpacken Sie das gesamte Paket und lassen Sie diese Bestandteile zusammen:
+  script/
+  01_Export_World_to_JSON.exe
+  02_Import_JSON_to_World.exe
+  03_Celestial_System_Editor.exe
+  User_Guide.txt
+
+Die drei EXE-Dateien sind Windows-Starter ohne eingebautes Python. Benötigt
+wird Python 3.8 oder neuer einschließlich Tkinter/Tk. Behalten Sie den Ordner
+script mit seinen Python-Modulen, dem Symbol und den nativen Titelleisten-DLLs.
+Benennen Sie die EXEs nicht um und mischen Sie keine Dateien verschiedener
+Versionen. Language oben rechts schaltet zwischen Englisch, Chinesisch und
+Deutsch um. Die Standardsprache ist Englisch.
+
+Findet der Starter Python nicht, setzen Sie PYTHONW_EXE auf Ihre pythonw.exe
+oder führen Sie im entpackten Paketordner den passenden Befehl aus:
+  python script/world_to_json_gui.py
+  python script/json_to_world_gui.py
+  python script/celestial_system_editor_gui.py
+
+2. Speichern und Zurücksetzen: die passende Funktion wählen
+
+Eine normale Apply-Schaltfläche und ein Schreibvorgang auf Datenträger sind
+unterschiedliche Schritte. Apply body fields, Apply world parameters, Apply
+biome order und Apply station orbit übernehmen Änderungen zunächst in das
+Editormodell. Save system to universe.chunks schreibt sie anschließend.
+Ungespeicherte Änderungen gehen beim Schließen oder Neuladen verloren.
+Schaltflächen mit ausdrücklichem .world-Bezug in den Arten-, Gebiets-, Farb-
+und Meeresbodendialogen schreiben nach Bestätigung direkt in die gewählte Welt.
+Sie warten nicht auf die Hauptschaltfläche Save system.
+
+Auswirkungen der einzelnen Verfahren:
+  01 Export: liest die Welt und schreibt JSON; kein Zurücksetzen der Welt.
+  02 Import: ersetzt Metadaten; gespeicherte Sektoren und Entitäten bleiben.
+  03 Namen, Darstellung, Umgebungsmetadaten oder reine Orbitverschiebung:
+     kein Gelände-Reset, solange das Erzeugungsrezept unverändert bleibt.
+  03 Größe, Höhen der Erzeugungsschichten, echte Dungeonlisten/Streuung oder
+     tatsächliche Änderungen an Ordered-Rezept/Reihenfolge/Größenbereichen:
+     die gesamte betroffene Welt wird beim Speichern zurückgesetzt. Ihr
+     Ersatz übernimmt altes Gelände, Gebäude, Flüssigkeiten und Entitäten
+     nicht; die Sicherung enthält weiterhin die alte Welt.
+  03 unveränderte Ordered-Reihenfolge erneut mit Apply und Save übernehmen:
+     die Hintergrundreparatur selbst ändert nur Metadaten, keine Sektoren.
+  03 Full biome für ein Gebiet: lokaler Reset der tatsächlich gewählten Sektoren.
+  03 Meeresboden sofort anwenden: lokaler Reset betroffener Sektoren unter den
+     erkannten Ozeanabschnitten gemäß allen Paarungen dieses Himmelskörpers.
+  03 Parallax only oder einer der beiden Monsterpool-Editoren: kein Reset
+     gespeicherter Sektoren.
+  03 Blocktausch oder Farbtonkopie: Änderung bestimmter gespeicherter
+     Blockfelder ohne Sektorneuerzeugung. Materialverhalten kann später im
+     Spiel dennoch Auswirkungen haben.
+
+Beenden Sie Starbound und seinen Server vollständig vor Import mit 02,
+Save system, Meeresbodenanwendung, Artenbearbeitung oder Farbtonkopie.
+Nur Generated biome regions erlaubt, das Spiel auf einer anderen Welt laufen
+zu lassen: Zielplanet verlassen, sein Entladen abwarten und bis zum Abschluss
+alle Spieler fernhalten. Das Werkzeug prüft Belegung und Änderungen der
+Zieldatei. Kehren Sie nicht vorzeitig zurück. Sichern Sie wichtige storage-Daten
+zusätzlich vollständig, bevor Sie destruktive Änderungen durchführen.
+
+3. Werkzeug 01 — World → bearbeitbares JSON
+
+Wählen Sie eine vorhandene Starbound- oder unterstützte OpenStarbound-.world
+und Start export. Die Originalwelt bleibt unverändert. Daneben entsteht
+tmp_<vollständiger World-Dateiname>.json. Eine vorhandene Ausgabedatei wird nur
+nach Bestätigung ersetzt. Open JSON und Open folder öffnen das Ergebnis bzw.
+seinen Ordner. Assets sind für den Export nicht nötig. Lesen Sie eine stabile
+Weltdatei, möglichst bei geschlossenem Spiel.
+
+Das kompakte Projekt enthält fünf Hauptgruppen:
+  source: Ursprungspfad, Prüfsumme, Größe und Biomanzahl. Diese Daten bestimmen
+     die passende Originalwelt; ändern Sie sie nicht zur Umgehung der Prüfung.
+  world: Name, Wetter, Schwerkraft, Tageslänge, Spawns, Startpunkt, Luft,
+     Beamen, Statuseffekte und weitere unterstützte Weltparameter.
+  sky: Himmelsfarben, Licht, Horizontbilder/Wolken, Satelliten und Himmelsgrenzen.
+  terrain: Erzeugungsschichten/Zellen, Geländeselektoren, Rauschen und Mischung.
+  biomes: Materialien, Erze, spawnProfile, Parallax, Audio und Placeables.
+     Identische kompilierte Kopien teilen ein parameters-Objekt; indexes nennt
+     die ursprünglichen Biomverweise, auf die dieses Objekt angewendet wird.
+
+Speichern Sie Änderungen als gültiges UTF-8-JSON und behalten Sie Datentypen
+und Array-/Objektstruktur bei. Wetter verwendet gewichtete Einträge; Ressourcen
+müssen in den Spiel-Assets existieren. Neu eingegebenes NaN/Infinity ist ungültig.
+01/02 können bestimmte bekannte, unveränderte ruhende native Rauschdaten
+erhalten; daraus folgt keine Erlaubnis für beliebige nichtendliche Eingaben.
+
+4. Werkzeug 02 — bearbeitbares JSON → World
+
+Wählen Sie das bearbeitete Projekt-JSON und seine passende ursprüngliche
+.world. Der Quellpfad wird aus dem Projekt übernommen; nach einer Verschiebung
+wählen Sie die korrekte Datei erneut. Die Quellprüfsumme muss übereinstimmen.
+Hat das Spiel die Welt seit dem Export gespeichert, exportieren Sie die aktuelle
+Welt erneut und übertragen Ihre beabsichtigten Änderungen auf dieses neue JSON.
+
+Keep original-world backup ist standardmäßig aktiviert. Back up and update
+World erstellt eine Sicherung mit Zeitstempel im selben Ordner, baut daraus die
+geänderte Datei, prüft sie und ersetzt den ursprünglichen .world-Pfad. Es gibt
+keinen zusätzlichen Ausgabepfad. Ohne Aufbewahrungsoption wird die Sicherung
+erst nach erfolgreicher Prüfung und Ersetzung gelöscht. Ein Fehler verwirft
+die Sicherung nicht absichtlich.
+
+New planet name kann den Namen im Projekt überschreiben. Eine Eingabe kann
+die Sternenkartensynchronisierung automatisch aktivieren; prüfen Sie das
+Kontrollkästchen vor dem Speichern. Für die Synchronisierung wählen Sie den
+universe-Ordner mit universe.chunks. Diese Datenbank wird gesondert gesichert
+und aktualisiert. Ohne Synchronisierung kann die besuchte Welt einen neuen
+Namen tragen, während die Karte den alten behält. Gespeicherte Teleport-
+Lesezeichen können ihren alten targetName behalten; löschen und erstellen Sie
+diese im Spiel neu. Die Werkzeuge bearbeiten keine .player-Dateien.
+
+02 ändert WorldMetadata und gleicht unterstützte doppelte Metadatenfelder ab.
+Gespeicherte Block-, Entitäten- und Unique-Index-Datensätze bleiben erhalten.
+Der Import erzeugt altes Gelände nicht neu, löscht keine Gebäude und verändert
+keine Weltabmessungen. Gelände-, Material-, Erz- und Placeable-Vorlagen wirken
+vorwiegend auf spätere Erzeugung. Eine geänderte JSON-Vorlage tauscht vorhandene
+Blöcke nicht automatisch aus. Hintergrund, Audio, Wetter und Spawnregeln können
+beim Neuladen wirksam werden. Wählen Sie für vorhandenes Gelände gezielt die
+entsprechende Funktion in 03.
+
+5. Werkzeug 03 — Laden und gemeinsame Bedienelemente
+
+Wählen Sie den vollständigen Ordner storage/universe mit universe.chunks sowie
+den passenden Assets-Ordner oder packed.pak. Load generated systems listet
+gespeicherte Systeme mit zugehöriger .system-Datei. Filtern Sie nach Namen oder
+X:Y:Z, wählen Sie das System und anschließend auf der zweiten Seite den
+Planeten/Mond, bevor Sie seine weiteren Seiten bearbeiten.
+
+Assets liefern neue Himmelskörper, Biomrezepte, Materialien, Wetter-/Spawn-
+Prüfung, Bilder und Dungeonlisten. Verwenden Sie die tatsächlichen Spielressourcen.
+Einige Kataloge entdecken installierte Quellen; das garantiert jedoch keine
+vollständige Zusammenführung beliebiger Mods/.patch-Dateien in der Reihenfolge
+des Spiels, insbesondere beim Blocktausch. Bildpfade sind Asset-Pfade und keine
+beliebigen Bilddateien auf dem Computer. Native Hintergrunderzeugung benötigt
+auch den passenden Spielserver. Starbound-/OpenStarbound-Installation und Assets
+müssen zueinander passen.
+
+Bei vorhandener .world werden tatsächliche Abmessungen, Erzeugungseinstellungen
+und Umgebungswerte daraus gelesen. Der Name einer Quellgrößenvorlage beweist
+nicht die tatsächliche Größe. Leere/deaktivierte Felder können für den gewählten
+Körpertyp nicht anwendbar sein. Scrollen Sie die Seiten, um alle Module zu sehen.
+Die sieben Seiten folgen unten in ihrer tatsächlichen Reihenfolge. Rote
+Beschriftungen mit hochgestelltem Stern kennzeichnen Erzeugungsparameter, deren
+Änderung beim Speichern einen Reset auslösen kann; einige Quellanzeigen sind
+schreibgeschützt. Prüfen Sie zusätzlich den abschließenden Speicherplan.
+
+6. Seite System
+
+Coordinate X/Y/Z verschiebt das System. Beim Speichern werden Zielkonflikte
+geprüft, vorhandene .system/.world-Dateien an die neue Koordinate kopiert und
+interne Koordinaten angepasst. Quellkopien bleiben erhalten. Eine reine
+Verschiebung bewahrt Gelände und Gebäude; gleichzeitige Rezeptänderungen haben
+weiterhin ihre eigene Resetwirkung.
+
+System name ist der Name des Sternsystems. Rebuild all body names from system
+name übernimmt zusätzlich neue Namen für Planeten/Monde als Entwurf. Nur den
+Systemnamen einzugeben ist nicht dasselbe wie sämtliche Körpernamen bewusst
+neu aufzubauen. System seed ist schreibgeschützt.
+
+Star typeName und Description bestimmen Sterntyp/Anzeigeinformationen.
+System-view star image betrifft den zentralen Stern innerhalb des Systems.
+Universe-map star frames und frame background steuern die kleine Animation auf
+der äußeren Navigationskarte; dies sind getrennte Ressourcen. Image scale,
+Magnitude und minimale/maximale Helligkeit ändern ihre jeweiligen
+Darstellungseigenschaften. Space threat level betrifft Weltraumbegegnungen,
+nicht pauschal die Biomschwierigkeit jedes Planeten; verwenden Sie die Auswahl
+1–6. Diese Anzeige-/Weltraumänderungen setzen Planetengelände nicht zurück.
+
+Die Namenswarnung für More Planet Info (MPI) prüft die Namensauswertung dieses
+Mods. Für dessen Nummernschild muss der vollständige Name mit ^green;I^white;
+bis ^green;XX^white; enden, ohne früheres kleingeschriebenes "green" und ohne
+nachgestellten Text. Ein Präfix wie ^#46D6A0; kann eine Farbe festlegen. MPI ist
+ein separater Mod; die Warnung installiert oder verändert ihn nicht. Diese
+Seite hat keine eigene System-Apply-Schaltfläche; Save system speichert sie.
+
+7. Seite Planets and moons
+
+Der Baum wählt einen Planeten oder Mond aus. Planet orbit und Moon orbit ändern
+seine Position; ein Mond besitzt auch den Orbit seines Mutterplaneten. Belegte
+Ziele werden abgelehnt. Reine Orbitänderungen kopieren die vorhandene Welt
+unter den neuen Dateinamen und bewahren gespeicherte Inhalte. Betroffene
+.clientcontext-Verweise des Cockpits werden mit Sicherungen angepasst. Die
+Vanilla-Slots erlauben 11 Planetenorbits und 3 Mondorbits je Planet.
+
+Body name, typeName, Description, Small image, smallImageScale, imageScale,
+Welt-/Großbildfarbton und globalDirectives ändern passende Anzeige- oder
+Umgebungsmetadaten. Apply body fields übernimmt sie zunächst nur im Editor.
+Bei Terrestrial-Körpern wählt typeName auch das große Cockpitprofil aus
+celestial.config: sichtbares Typetikett und Großbildstil sind im Spiel
+gekoppelt. Einen direkten Großbildpfad verwendet nur FloatingDungeon. Der
+gewöhnliche Durchmesser auf der Systemkarte folgt numerischer Weltbreite und
+den planetSizes-Schwellen des Spiels, nicht den beiden rohen Bildskalierungen.
+Weltfarbton/globale Direktiven können auch die Darstellung innerhalb der Welt
+beeinflussen. Dies ist keine Farbtonkopie gespeicherter Blöcke. Global directives
+akzeptiert eine Direktive oder ein JSON-Array aus Direktivenzeichenfolgen.
+
+Kind, World type, Quellgröße, tatsächliche Breite/Höhe, Systemkartendurchmesser,
+Quell-Terrestrial-Typen, primäres Biom/Anzahl, Körperseed und Weltpfad dienen
+hier als schreibgeschützte Informationen. Die Größe bearbeiten Sie unter World
+parameters, Erzeugungsbiome unter Ordered biomes. Gravity wird mit World
+parameters geteilt; eine reine Schwerkraftänderung löscht keine Sektoren.
+
+New celestial type erstellt aus Assets einen neuen Barren-Planeten, Gasriesen,
+Asteroidenbereich, ein Ancient gateway oder eine experimentelle Outpost-Kopie
+im Orbit. New planet size gilt für den gewöhnlichen Planetentyp. Add as planet
+fügt einen neuen Orbit hinzu. Add as selected planet's moon nutzt den gewählten
+Mutterplaneten beziehungsweise den Mutterplaneten eines ausgewählten Mondes.
+Planet, Gas giant, Asteroid field und Ancient gateway unterstützen diese
+Satellitenfunktion. Outpost ist ein unabhängiger FloatingDungeon und kann nicht
+als Mond hinzugefügt werden. Ein neuer Körper löscht keine anderen Welten.
+
+Die Outpost-Kopie ist ein eigenständiger Ort und nicht die einzigartige
+Vanilla-Quest-InstanceWorld. Erwarten Sie weder den vollständigen ursprünglichen
+Handlungszustand noch gemeinsamen Questfortschritt. Nichtterrestrische Körper
+erhalten durch einen Planeten-/Mondslot keine terrestrischen Geländeoptionen.
+Echte Raumstationen gehören auf die Seite System objects.
+
+Remove from star map merkt die Entfernung des gewählten Körpers vor. Bei einem
+Planeten verschwinden auch seine Monde aus der Karte. Vorhandene Weltdateien
+bleiben als verwaiste Dateien erhalten; sie werden nicht automatisch gelöscht.
+Save system schreibt neue Körper, Entfernungen und weitere vorgemerkte Änderungen.
+
+8. Seite World parameters
+
+Size template preset, World width und World height bestimmen die Abmessungen
+einer Terrestrial-Welt. Eine Vorlage liefert Maße; direkte ganzzahlige Eingaben
+ermöglichen Sondergrößen. Größenänderungen skalieren höhenabhängige Werte des
+aktuellen Erzeugungsrezepts und setzen beim Speichern die ganze Welt zurück.
+Die Quellvorlage kann von den tatsächlichen Zahlenmaßen abweichen. Ändern Sie
+die Abmessungen nicht bloß für ein Kartensymbol, wenn Sie keine neue Welt
+erzeugen möchten.
+
+Gravity, Day length und Weather pool sind Umgebungsmetadaten. Wetter wird als
+[[Gewicht, "clear"], [Gewicht, "rain"], ...] eingegeben; Gewichte sind relativ.
+Verwenden Sie existierende Wetter-IDs und die jeweils erforderlichen positiven
+oder nichtnegativen Werte. Terrestrial benötigt einen gültigen nichtleeren
+Wetterpool. Unverändertes gültiges Quellwetter bleibt erhalten; eine leere
+Eingabe ist kein allgemeiner Löschbefehl. Diese Felder allein setzen Gelände
+nicht zurück.
+
+Sky and light colors enthält neun Felder: mainColor; morningColors, dayColors,
+eveningColors, nightColors; morningLightColor, dayLightColor, eveningLightColor,
+nightLightColor. Die vier *Colors-Verläufe verlangen jeweils genau zwei Farben,
+die übrigen Felder eine. Möglich sind native Farbzeichenfolgen oder RGB/RGBA-
+Arrays. Zeichenfolgen benötigen JSON-Anführungszeichen. Leere Felder behalten
+ihren vorhandenen Wert. Farbänderungen aktualisieren Metadaten ohne Sektorlöschung.
+
+Vertical generation layer wählt vorhandene Schichten wie Space, Atmosphere,
+Surface, Subsurface, Underground oder Core. Minimum height ist die Schichtgrenze;
+Base height ist eine Gelände-Referenzhöhe und nicht zwingend die endgültige
+Oberflächenhöhe jedes Blocks. Höhen müssen geordnet und innerhalb der Welt
+liegen. Änderungen dieser Erzeugungshöhen führen zu einem Reset der ganzen
+Welt. Ein Schichtwechsel behält Entwürfe. Apply world parameters übernimmt alle
+bearbeiteten Schichten dieses Körpers, nicht nur die sichtbare.
+
+Real generation dungeons ist die tatsächliche Liste zu erzeugender Bauwerke
+in der gewählten Schicht. Dungeon X variance ändert die Streuung ihrer
+horizontalen Platzierung. Eine Änderung eines dieser Felder betrifft die Erzeugung
+und setzt eine vorhandene Welt beim Speichern zurück. Verwenden Sie den
+tatsächlichen Asset-Katalog; eine leere Auswahl bedeutet keine Einträge.
+
+Star-map display dungeons (MPI) ist eine getrennte reine Anzeigeliste. Sie
+erzeugt oder entfernt keine echten Dungeons und setzt Gelände nicht zurück.
+Die Auswahl stammt aus dem MPI-Anzeigekatalog; Bilder/Texte definiert der Mod.
+Sie ist für Space, Atmosphere, Surface und Subsurface bei vorhandener .world
+verfügbar. Fehlt die Welt oder wird sie neu erzeugt, wird die Anzeigeüberschreibung
+aufgeschoben, damit zunächst das echte Dungeonrezept verwendet wird. Öffnen
+Sie nach der Welterzeugung 03 erneut und speichern Sie die Anzeigeliste noch
+einmal. Ändern Sie nicht die echte Dungeonliste nur für ein MPI-Symbol.
+Abschließend Apply world parameters und Save system verwenden.
+
+9. Seite Ordered biomes und ihre Dialoge
+
+9.1 Schichten, Reihenfolge und Größenbereiche
+Wählen Sie Generation layer sowie Main regions oder Sub-regions. Der erste
+Eintrag ist primär. Add from assets, Remove, Move up und Move down bearbeiten
+die Reihenfolge. Katalogbeschriftungen können einen Ordnerpräfix zeigen;
+gespeichert wird der eigentliche Biomname. Vollständige Regionsrezepte werden
+mit den Einträgen verschoben.
+
+Secondary-region size range und Sub-region size range sind gemeinsame
+zufällige relative Gewichte. Sie sind weder feste X-Endpunkte je Biom noch
+normalisierte 0–1-Positionsgrenzen. Der Sub-region-Bereich muss aufsteigend
+sein (Minimum ≤ Maximum), wobei das Maximum < 1 bleiben muss. Für konkrete Koordinaten in vorhandenen
+Welten verwenden Sie Generated biome regions. Schicht-/Gruppenwechsel behalten
+Entwürfe. Apply biome order übernimmt alle bearbeiteten Layer/Main/Sub-Gruppen
+dieses Körpers. Main/Sub-Anzahlen werden automatisch angeglichen: fehlende
+Sub-Slots übernehmen passende Main-Einträge, überzählige werden hinten
+abgeschnitten; ein Bericht nennt die Anpassungen. Tatsächliche Änderungen von
+Reihenfolge, Bereichen oder Rezept setzen beim bestätigten Save system die
+gesamte vorhandene Welt zurück.
+
+9.2 Ordered-Hintergründe und dieselbe Reihenfolge erneut anwenden
+Hat eine vorhandene Welt wiederholte/falsche Hintergründe aus einer Ordered-
+Konfiguration, wählen Sie die betroffene Schicht, lassen Sie die gewünschte
+Reihenfolge unverändert und klicken Sie ausdrücklich Apply biome order, danach
+Save system. Apply merkt die Reparatur vor und schreibt noch nichts. Die
+Reparatur gibt passenden Zellen den Parallax ihres eigenen Bioms, erhält andere
+Umgebungsfelder und gespeicherte Sektoren und setzt selbst kein Gelände zurück.
+Das bloße Öffnen der Seite oder Save ohne ausdrückliches Apply fordert keine
+Hintergrundreparatur einer alten Welt an.
+
+Tatsächliche Reihenfolge-/Rezeptänderungen behalten die oben beschriebene
+Resetwirkung. Der native Speichervorgang bereitet passende neue oder
+zurückgesetzte Nichtozeanwelten mit mehreren Biomen vor und repariert dabei
+deren Hintergründe. Ein ausdrücklicher Auftrag für eine fehlende Welt kann
+ebenfalls native Erzeugung benötigen. Lassen Sie das Spiel geschlossen und
+den privaten Hintergrundprozess vollständig abschließen. Registrierte
+Ocean/Floor-Hintergründe behalten ihre getrennte Paarungslogik. Für diese
+Editorfunktion müssen weder Mod/config noch Allow Parallax Transition geändert
+werden.
+
+9.3 Edit generated species…
+Wählen Sie einen Eintrag und öffnen Sie den Dialog für eine vorhandene .world.
+spawnTypes enthält einen Spawntypnamen pro Zeile. monsterParameters ist ein
+gemeinsames JSON-Objekt für das ganze Profil, kein eigener Satz je Art. Der
+Dialog liest zunächst die erste kompilierte Kopie dieses Biomnamens. Save
+species to .world aktualisiert alle kompilierten Kopien dieses Namens in der
+gesamten Welt, nicht nur in der sichtbaren Schicht oder einem Rechteck.
+Leere spawnTypes mit einem ausdrücklich eingegebenen Parameterobjekt löschen
+den automatischen Pool. Sind beide Felder vollständig leer, geschieht nichts.
+Identische gültige Werte benötigen ebenfalls keinen Schreibvorgang. Hat sich
+die Welt seit dem Öffnen verändert, öffnen Sie den Dialog erneut.
+
+Dieses direkte Speichern ändert nur zukünftige automatische Spawnregeln.
+Kein gespeichertes Monster und keine andere Entität wird gelöscht, auch nicht
+Monster in Spielergebäuden. Gespeicherte Blöcke bleiben erhalten. Vorübergehende
+Laufzeitmonster folgen weiterhin dem Entladeverhalten des Spiels. Ohne .world
+kommen die Arten aus Assets; diese weltbezogene Überschreibung muss warten.
+Für einen koordinatenbegrenzten Pool verwenden Sie Generated biome regions →
+Replace monster spawns only.
+
+9.4 Ocean-floor pairing…
+Wählen Sie unter Surface → Main regions ocean, toxic, arctic oder magma.
+Jeder Eintrag besitzt einen eigenen Boden und eigene Parameter. Ein Ozean
+überschreibt nicht pauschal alle gleichnamigen Ozeane. Wenn bei wiederholtem
+Ozeannamen der ursprüngliche Ordered-Slot aus World4 nicht rekonstruierbar ist,
+werden tatsächliche Abschnitte von links nach rechts zugeordnet. Die Böden
+folgen den wirklich erzeugten Ocean-X-Intervallen, keinem geschätzten
+Prozentsatz der Weltbreite.
+
+Paired floor biome wählt Ökologie/Darstellung des Bodens. Floor-biome bottom Y,
+Floor terrain height und Ocean/floor boundary Y sind drei verschiedene Höhen.
+Das Bodenbiom reicht von der Untergrenze bis zur oberen Grenze. Die Geländehöhe
+ist eine Bodenreferenz; das höhere Wasser verwendet Ocean-Ökologie/Parallax.
+Kleineres Y liegt tiefer. Vorgaben stammen aus passenden Schichten der geladenen
+Welt. Der gespeicherte oceanLiquidLevel ist die Wasseroberfläche und nicht
+einer dieser drei Werte.
+
+Keep this ocean uniform füllt den erforderlichen zugehörigen Sub-Slot mit
+demselben Ozeanrezept. Er folgt dem Main-Ozean und ist in Sub gegen unabhängiges
+Entfernen/Verschieben gesperrt. Mehrere Ozeane werden einzeln behandelt.
+Smooth shore-to-floor basin verbindet feste Ufer und Bodenreferenz mit einer
+sanften Beckenform. Basin sampling width steuert die Profilabtastung, Floor
+ecology above terrain die Ökologiehöhe. Rauschen/Relief bleiben wirksam; die
+Referenzhöhe verspricht keine überall ebene Oberfläche.
+
+Floor .biome overrides ist ein erweitertes JSON-Objekt für Bodenmaterialien,
+Farbton, Arten, Placeables, Audio und Parallax. Floor region-recipe overrides
+steuert stattdessen Gelände-/Höhlen-/Erzselektoren und Flüssigkeitsrezepte.
+Objekte werden rekursiv zusammengeführt; Arrays ersetzen das jeweilige ganze
+Originalarray. Die beiden Parameterräume sind nicht austauschbar. Ressourcen-
+verweise müssen gültig sein.
+
+Save settings only merkt die Paarung nur vor. Es speichert weder eine .world
+noch das gesamte System auf Datenträger. Schließen Sie den Dialog und wählen
+Sie Save system. Rezeptänderungen können einen Reset der ganzen Welt erfordern.
+Benötigen gepaarte Welten Erstellung/Reset, erzeugt das Werkzeug sie in
+privatem Speicher, richtet Böden aus, ergänzt passende Uferpflanzen und prüft
+das Ergebnis vor der Übernahme in den Spielstand. Dieser Ablauf braucht keinen
+manuellen Planetenbesuch zwischendurch und keinen zweiten Speichervorgang.
+
+Save and apply to generated .world ist eine direkte Funktion für eine
+kompatible vorhandene Welt ohne ausstehenden Gesamtreset. Sie wendet sämtliche
+Paarungen dieses Körpers an, nicht nur die gerade sichtbare einzelne Zeile.
+Die Welt wird gesichert; betroffene Sektoren unter den erkannten Ozeanabschnitten
+werden einschließlich gespeicherter Gebäude/Entitäten zurückgesetzt. Dies ist
+keine reine Hintergrundänderung. Ist Erstellung/Reset erforderlich, bleiben
+die Einstellungen für Save system vorgemerkt. Dieselbe Reihenfolge erneut
+anzuwenden reiht einen bereits fertiggestellten Boden nicht erneut ein.
+Tatsächlich ausstehende/geänderte Paarungen behalten ihre eigenen Anwendungs-
+und Resetbestätigungen.
+
+Paarungen liegen im lokalen Anwendungsdaten-Cache des Editors, getrennt nach
+Universe und Körper. Ein unveränderter alter Pending-Körper ohne .world wird
+nicht nur durch Speichern eines unabhängigen Systemfeldes erzeugt. Die frühere
+Pending-Wiederaufnahme kann fortfahren, sobald seine Welt vorhanden und das
+Spiel geschlossen ist.
+
+9.5 Ozeanökologie und Grenzen lokaler Resets
+Die Ökologie des gekrümmten Bodens reicht mindestens 4 Blöcke über das Gelände;
+ausdrücklich größere Werte bleiben. Floor-Layoutbänder entfernen Pflanzen/
+Monsterpools in den ersten 4 Blöcken unter Wasser, hohe Wasserpflanzen bis 30
+und Microdungeons bis 150. Ocean-Bäume sind nur im flachen 0–30-Band erlaubt;
+Bush/Grass und Grasmodifikatoren können unter Wasser bleiben. Gewöhnliche
+Unterwasser-Ocean-Objekte und sein Monsterpool werden entfernt. Erlaubte
+Pflanzen benötigen weiterhin entsprechende Asset-Einträge. Dies sind native,
+rauschbeeinflusste Layoutbänder und keine exakten Grenzen für jede Entität.
+
+Zusätzliche native Pflanzen werden nur innerhalb von 600 horizontalen Blöcken
+seewärts jedes tatsächlichen festen Ufers ergänzt. Der getrennte Inselschutz
+reicht bis einschließlich 750; außerhalb können native Inseln und Ökologie
+über Wasser zurückkehren. Beide Werte sind keine Bodenökologiehöhe. Große
+Layer-Dungeons sind keine lokalen Paarungsvorlagen; Dungeons, die Reset-
+Sektoren schneiden, können verloren gehen. Gefällte Biompflanzen wachsen
+nicht automatisch am selben Ort nach. Lokale Paarung liefert keinen
+Laufzeit-Nachwachsmod und garantiert nicht den Erhalt sämtlicher Bauwerke in
+betroffenen Sektoren.
+
+10. Seite System objects
+
+Die Liste zeigt .system-Objekte mit Typ, Orbitziel und UUID. Eine Raumstation
+ist ein SystemObject und kein Planet/Mond. Wählen Sie einen neuen Stationstyp
+aus Assets, das Systemzentrum oder einen Körper als Orbit target und Add space
+station. Eine vorhandene Zeile kann bearbeitet oder mit Remove selected object
+entfernt werden.
+
+Orbit radius ist die Entfernung auf der Karte. Initial angle verwendet 0°
+rechts, 90° oben, 180° links, 270° unten. Direction ist +1 oder -1. Instance
+parameters ist ein JSON-Objekt: displayName bezeichnet den Titel des ausgewählten
+Kartenobjekts, description seine Information, icon einen Asset-Bildpfad und
+bookmarkIcon einen Lesezeichenschlüssel. Ziel/Warp-Aktion, Geschwindigkeit und
+Himmel liefert weiterhin der Asset-Objekttyp. Ein vorübergehendes Schiff/eine
+Anomalie kann später verschwinden oder neu erzeugt werden und seine gespeicherte
+Überschreibung verlieren.
+
+Apply station orbit übernimmt Orbit und Parameter zunächst im Editor.
+Save system schreibt die .system-Änderungen mit Sicherung. Dabei werden weder
+Planetensektoren zurückgesetzt noch das Innengelände einer Station bearbeitet
+oder Outpost-Handlungszustände verliehen.
+
+11. Seite Generated biome regions — ein Rechteck direkt bearbeiten
+
+11.1 Ziel, Koordinaten und Operation
+Wählen Sie einen Terrestrial-Körper mit vorhandener .world und passende Assets.
+Wählen Sie Operation, X/Y-Anfang und -Ende sowie je Kante die untere/obere
+Sektorrundung. Endliche Dezimalwerte sind hier erlaubt; erst wird gerundet,
+dann das endgültige Rechteck geprüft. Die Bestätigung zeigt wirksame inklusive
+Grenzen auf dem 32×32-Sektorraster. X darf um den Planeten herumführen; Y steigt
+nach oben und kann nicht umlaufen. Prüfen Sie besonders die horizontale Naht
+und schmale benachbarte Biome.
+
+Apply regions to .world liest jedes Mal das aktuelle Formular und schreibt
+diese Operation direkt. Es gibt keine Warteschlange und keinen Add/update-
+Schritt. Spätere Rechtecke dürfen frühere überlappen. Ein ausstehender Reset
+der gesamten Welt blockiert direkte Änderungen. Speichern/beenden Sie zuerst
+die Erzeugung, laden Sie neu und wenden Sie danach die lokale Änderung an.
+
+11.2 Biome / parallax — Full biome
+Wählen Sie das Zielbiom bei ausgeschaltetem Parallax only. Assets liefern das
+vollständige Rezept für Gelände, Höhlen, Erze, Flüssigkeiten, Pflanzen/
+Placeables, Spawns, Audio und Parallax. Das Biom muss zuvor nicht in dieser
+Welt kompiliert gewesen sein. Gewählte gespeicherte Sektoren werden
+zurückgesetzt; Gebäude, Objekte, Pflanzen, Flüssigkeiten und Entitäten darin
+werden entfernt. Andere Sektoren werden nicht für den Reset ausgewählt.
+Dies ist eine lokale Neuerzeugung, sofern nicht das ganze Weltgebiet gewählt
+wurde. Gespeicherte Blöcke besitzen kein zuverlässiges Spieler-/Naturmerkmal;
+Full biome kann in seinen Sektoren nicht nur die Spielergebäude ausnehmen.
+
+Farben bevorzugen eine ausdrückliche Überschreibung, dann den vorhandenen
+nativen Farbton desselben Bioms in dieser Welt, sonst eine stabile Auswahl
+aus Weltseed/Biom. Gültiger Farbton 0 bleibt erhalten; neue Rechteckkoordinaten
+würfeln die Farbe nicht erneut aus.
+
+11.3 Biome / parallax — Parallax only und eigenes JSON
+Parallax only ändert den Umgebungshintergrund der Auswahl, ohne gespeicherte
+Blöcke, Gebäude, Flüssigkeiten, Pflanzen oder Entitäten zu löschen. Andere
+Biominhalte bleiben; Blöcke, Monsterpool und Gelände werden nicht umgewandelt.
+Wählen Sie ein Biom als Hintergrundquelle. Custom parallax JSON kann sowohl
+für Parallax only als auch Full biome einen eigenen Hintergrund liefern.
+Wählen Sie eine JSON-Datei mit aufgelöstem Parallax-Objekt oder
+{"parallax": {...}}; Texturen müssen in den Spiel-Assets existieren. Das Feld
+nimmt einen Dateipfad entgegen, keinen eingefügten JSON-Text.
+Apply regions to .world speichert die Änderung bereits. Laden Sie die Welt
+neu, um sie zu sehen; Save system ist für diese direkte Änderung nicht nötig.
+
+11.4 Replace tiles only — One materialName → another
+Laden Sie Materialnamen aus Assets oder geben Sie Quell-/Ziel-materialName
+direkt ein. Namen stammen aus .material-Dateien rekursiv unter tiles/materials.
+Verwenden Sie beispielsweise dirt, nicht Inventar-itemName, übersetzten
+Anzeigenamen oder numerische ID. Wählen Sie Vordergrund, Hintergrund oder beide.
+Die Vorschau zählt passende gespeicherte Materiallagen und zeigt Risiken.
+Nach Bestätigung werden nur ihre Material-IDs ersetzt.
+
+Keine Sektoren werden geleert, fehlendes Gelände wird nicht erzeugt. Farbton,
+Bemalung, Modifikatoren, Flüssigkeitsdaten, übrige Blockfelder sowie Objekt-/
+Pflanzen-/Entitätsdatensätze bleiben. Vordergrund/beide lehnt inkompatible
+collisionKind-Werte ab. Anderes Fall-, Stütz- oder Flüssigkeitsverhalten kann
+im Spiel dennoch Blöcke bewegen oder Objekte lösen. Erhaltene Datensätze
+garantieren keine identische Physik. Passende Materialien in Spielergebäuden
+sind eingeschlossen. Keine Treffer/gleiches Material bedeutet keinen
+Schreibvorgang und keine Sicherung. Ändern sich Welt oder gewählte
+Materialdefinitionen nach der Vorschau, laden Sie neu und wiederholen diese.
+
+11.5 Replace tiles only — Convert to a biome block arrangement
+Wählen Sie Target biome palette und Vordergrund/Hintergrund/beide. Geeignete
+gespeicherte Haupt-/Nebenblockrollen werden auf die Zielpalette abgebildet;
+ihre vorhandene Clusteranordnung bleibt. Biomindizes, Geländeform, Farb-/
+Bemalungs-/Modbytes, Flüssigkeiten und Entitäten ändern sich nicht. Es findet
+keine vollständige Biomerzeugung statt. Die Eignung folgt der natürlichen
+Materialtabelle des gespeicherten Blockbioms, keinem zuverlässigen Verlauf
+der Platzierung. Passende spielergesetzte Materialien können ebenfalls erfasst
+werden. Blockbiomindex 0 hat keine nutzbare Quellpalette und bleibt mit Hinweis
+erhalten; seine Herkunft wird nicht geraten.
+
+Die harte Grenze bleibt innerhalb des gerundeten Rechtecks. Die optionale
+Starbound-artige weiche Grenze tastet gespeichertes block/blend noise im
+4-Block-Raster ab. Sie kann Blöcke außerhalb einbeziehen und innerhalb
+ausschließen. Beide Mengen stehen in der Vorschau. Prüfen Sie den Umfang
+besonders bei Gebäuden. Kollisions-/Verhaltens- und Vorschauhinweise gelten
+auch für dieses Modul.
+
+11.6 Replace monster spawns only
+Die linke Vorschau gruppiert aktuelle Pools des Gebiets nach Biom. Refresh
+selection aktualisiert sie. Die rechte Eingabe ersetzt das vollständige
+automatische spawnProfile im Rechteck einschließlich gemeinsamer Parameter;
+sie hängt nichts an alte Pools an. Behalten Sie das äußere spawnProfile sowie
+beide inneren Felder. Dieses Beispiel leert den Pool ausdrücklich:
+  {"spawnProfile": {"monsterParameters": {}, "spawnTypes": []}}
+Zum Füllen ersetzen Sie [] durch ein Array gültiger Spawntypnamen der
+Spielressourcen. Dies sind spawnTypes, keine beliebigen /spawnmonster-IDs.
+Eine leere Eingabe bewirkt nichts. Das Parameterobjekt gilt für alle Einträge;
+ein eigener Parametersatz je Art ist hier nicht möglich.
+
+Sämtliche gespeicherten Entitäten einschließlich Monster in Spielergebäuden
+und alle gespeicherten Blocksektoren bleiben unangetastet. Geändert werden
+künftige automatische Regeln. Vorübergehende Laufzeitmonster verwaltet das
+Spiel beim Entladen. Native Mischung/Platzierung kann die Umgebung der Ränder
+beeinflussen; das Rechteck ist keine feste Grenze zukünftiger Monsterpositionen.
+Neue Layoutgrenzen können auch Umgebungs-/Flüssigkeitsabfragen am Rand und
+spätere Geländemischung ändern, ohne gespeichertes Gelände neu zu erzeugen.
+Kapazitätsfälle, die ein Umschreiben gespeicherter Blockdatensätze verlangen
+würden, werden abgelehnt. Anders als hier ändert der Ordered-Artendialog jede
+kompilierte Kopie des gewählten Biomnamens in der gesamten Welt.
+
+11.7 Ocean / ocean-floor options für dieses Rechteck
+Bei einem vollständigen ocean/toxic/arctic/magma-Biom geben Sie die absolute
+Wasseroberflächenhöhe Y an. Das Rechteck kann reiner Ozean bleiben oder einen
+gepaarten Boden erhalten. Bei Paarung bestimmen Sie Bodenbiom, Untergrenze,
+Geländereferenz, Ocean/Floor-Grenze, einheitlichen Ozean, sanftes Becken,
+Abtastbreite und Ökologiehöhe. Bodenuntergrenze, Referenz und Übergang müssen
+die gültige Rechteckordnung einhalten. Die absolute Wasseroberfläche muss
+innerhalb der Welthöhe liegen, darf aber über einem vollständig untergetauchten
+Rechteck liegen.
+
+Direktes Auswählen von oceanfloor, toxicoceanfloor, arcticoceanfloor oder
+magmaoceanfloor erzeugt nur einen Bodenbereich; es fügt nicht heimlich einen
+oberen Ozean hinzu. Bodenökologie folgt der Kurve und endet unter der
+Wasseroberfläche; unsicheres Relief wird abgeflacht. Diese Full-biome-Funktionen
+setzen gewählte Sektoren zurück. Lokale Parameter überschreiben keine
+planetweiten Ordered-Paarungen. Die getrennten Ökologie-/Ufergrenzen aus 9.5
+bleiben zu beachten. Parallax only führt keine Boden-/Geländeneuerzeugung aus.
+
+12. Seite Copy material hue/color
+
+Geben Sie ganzzahlige Koordinaten für Reference rectangle und Target rectangle
+innerhalb der ausgewählten erzeugten Welt ein. Dies sind genaue Blockbereiche,
+nicht die Dezimal-/Sektorrundungsfelder der Generated-Seite. X darf umlaufen,
+Y muss ansteigen. Analyze reference liest verfügbare Stile ohne Speichern.
+
+Apply hue/color to .world kopiert für jede passende Material-ID den dominanten
+Referenzfarbton und die Farbvariante auf gespeicherte Zielblöcke, getrennt nach
+Vordergrund und Hintergrund. Zielmaterialien ohne Referenz bleiben unverändert.
+Dies kopiert Stile nach Material, kein pixelgenaues Bild und kein vollständiges
+Biom. Material-IDs, Gelände, Flüssigkeiten, Objekte, Entitäten, Biommetadaten
+und Parallax bleiben unverändert. Es gibt keinen Sektorreset. Die Schaltfläche
+schreibt direkt mit aufbewahrter Sicherung, wartet nicht auf Save system und
+wird durch einen ausstehenden Reset der ganzen Welt blockiert.
+
+13. Abschließendes Speichern, Wiederherstellung und häufige Probleme
+
+Für vorgemerkte 03-Änderungen beenden Sie Spiel/Server, wenden die jeweiligen
+Module an und klicken Save system to universe.chunks. Der Vorgang sammelt
+Körper-/Welt-/Schicht-/Biomentwürfe, prüft sie und plant Metadatenaktualisierungen,
+Migrationen/Resets mit passenden Bestätigungen. Wenden Sie Stationsformulare
+vorher mit Apply station orbit an. Prüfen Sie Weltanzahl und Resetumfang;
+mehrere Seiten können denselben Körper beeinflussen. Native Privaterzeugung
+kann Minuten dauern. Lassen Sie den Editor bis Erfolg oder Fehlermeldung offen
+und starten Sie das Spiel dabei nicht. Eingabe-/Dateiprüfung macht einen
+destruktiven Reset ohne Sicherung nicht rückgängig.
+
+02 und direkte 03-Änderungen erstellen gewöhnlich eine Sicherung im selben
+Ordner wie planet.world.bak_before_edit_<Zeitstempel>. Hauptspeichervorgänge
+sichern nach Bedarf auch Datenbanken, .system und .clientcontext. Behalten Sie
+die im Ergebnisdialog genannten tatsächlichen Pfade. Eine Gesamtreset-Sicherung
+enthält die vorige Welt. Ersatzwelten ohne native Vorerzeugung können gemäß
+Werkzeughinweis beim späteren Spielbesuch entstehen.
+
+Beenden Sie zur Wiederherstellung Spiel, Server und Editor. Bewahren Sie die
+aktuellen bearbeiteten Dateien separat auf und kopieren Sie dann die passende
+Sicherung auf den exakten ursprünglichen Dateinamen. Bei System-/Orbitänderung
+müssen universe.chunks, .system, .world und betroffene .clientcontext-Dateien
+konsistent wiederhergestellt werden, nicht nur irgendeine ältere Weltdatei.
+Für ein vollständiges Editor-Setup bewahren Sie auch die lokale Ozeanpaarungs-
+konfiguration auf; ihr Cache liegt getrennt vom universe-Ordner.
+
+Fehlt eine .world, können 01/02 sie nicht exportieren/importieren und Gebiets-,
+Farbton- oder Artendialoge keine gespeicherten Inhalte bearbeiten. Erstellen/
+besuchen Sie zuerst die passende Welt, außer 03 bietet ausdrücklich native
+Erstellung beim Speichern an. MPI-Anzeigeüberschreibungen müssen wie oben
+beschrieben warten. Bei fehlenden Ressourcen wählen Sie passende Assets und
+korrigieren ID/Pfad. Bei veränderter oder belegter Quelle verlassen/beenden
+Sie das Spiel, laden den aktuellen Stand neu und wiederholen die gewünschte
+Änderung; umgehen Sie die Prüfung nicht. Native nichtleere Biomindizes sind
+auf 255 begrenzt. Index 0 bedeutet rechtmäßig kein Biom und ist kein defekter
+Eintrag.
+
+Bewahren Sie bei Fehlern Meldung, passende Sicherung und
+starbound_world_editor_05.log im gewählten universe-Ordner auf. Die historische
+05 im Lognamen erfordert keinen weiteren Starter. Ändert eine JSON-Vorlage
+altes Gelände nicht, verwenden Sie gezielt die passende Block-/Gebietsfunktion.
+Bleiben Hintergründe scheinbar gleich, entladen/laden Sie die Zielwelt
+vollständig und prüfen Schicht/Gebiet. Full biome ist kein harmloser Ersatz
+für eine reine Hintergrundänderung.
